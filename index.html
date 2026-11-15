@@ -1,0 +1,2429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>聞き取り Kikitori</title>
+<meta name="description" content="Japanese listening and shadowing player for YouTube and audio files. Bring your own API keys.">
+<meta name="theme-color" content="#1d2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kikitori">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d2740'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' font-family='sans-serif' font-weight='900' fill='%23ffd23f' stroke='%23141b30' stroke-width='2'%3E聞%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fog:#e8ebef; --paper:#f9fafc; --ink:#1d2740; --mute:#5c677d; --line:#d3d8e1;
+  --telop:#ffd23f; --telop-ink:#141b30; --screen:#1d2740; --screen-2:#26335a;
+  --rec:#cf3a2c; --ok:#1d7a57; --warn:#9a6a00; --focus:#3461d6;
+  --tint:rgba(255,210,63,.18);
+  --r-s:6px; --r-m:10px; --r-l:16px;
+  --font:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Yu Gothic","Meiryo",system-ui,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --fog:#10162a; --paper:#182038; --ink:#e7eaf2; --mute:#9ca6bd; --line:#2a3555; --screen:#0b1020; --screen-2:#1a2442; --tint:rgba(255,210,63,.10); --ok:#47b98c; --warn:#e2b44c; --focus:#7f9dff; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--fog);color:var(--ink);font:16px/1.6 var(--font);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button,input,select,textarea{font:inherit;color:inherit}
+[hidden]{display:none!important}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+::selection{background:var(--telop);color:var(--telop-ink)}
+.ja{font-feature-settings:"palt" 0}
+/* telop: the one loud thing */
+.telop-text{font-weight:900;color:#fff;letter-spacing:.02em;
+  text-shadow:
+   -2px -2px 0 var(--telop-ink),2px -2px 0 var(--telop-ink),-2px 2px 0 var(--telop-ink),2px 2px 0 var(--telop-ink),
+   0 -3px 0 var(--telop-ink),0 3px 0 var(--telop-ink),-3px 0 0 var(--telop-ink),3px 0 0 var(--telop-ink),
+   0 4px 0 var(--telop-ink)}
+.fr{position:relative;display:inline-block;line-height:1.25;text-indent:0}
+.fr::before{content:attr(data-r);position:absolute;left:50%;bottom:100%;transform:translateX(-50%);font-size:.5em;line-height:1.15;white-space:nowrap;color:var(--mute);font-weight:500;letter-spacing:0;pointer-events:none}
+.telop-text .fr::before{color:var(--telop);font-weight:700;text-shadow:-1px -1px 0 var(--telop-ink),1px -1px 0 var(--telop-ink),-1px 1px 0 var(--telop-ink),1px 1px 0 var(--telop-ink),0 2px 0 var(--telop-ink)}
+/* header */
+.bar{position:sticky;top:0;z-index:20;display:flex;gap:.6rem;align-items:center;padding:.6rem max(1rem,env(safe-area-inset-left));background:var(--fog);border-bottom:1px solid var(--line)}
+.mark{font-size:1.45rem;text-decoration:none;line-height:1;padding:.15rem .1rem;white-space:nowrap}
+.yt-form{flex:1;display:flex;min-width:0;max-width:640px}
+.yt-form input{flex:1;min-width:0;border:1px solid var(--line);border-right:0;border-radius:var(--r-m) 0 0 var(--r-m);background:var(--paper);padding:.5rem .8rem}
+.yt-form button{border-radius:0 var(--r-m) var(--r-m) 0}
+.btn{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--line);background:var(--paper);border-radius:var(--r-m);padding:.45rem .8rem;cursor:pointer;white-space:nowrap;line-height:1.3;text-decoration:none}
+.btn:hover{border-color:var(--mute)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary:hover{opacity:.9}
+.btn.quiet{border-color:transparent;background:transparent}
+.btn.quiet:hover{background:var(--paper);border-color:var(--line)}
+.btn.small{padding:.25rem .55rem;font-size:.85rem;border-radius:var(--r-s)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:1.1em;height:1.1em;flex:none}
+.icon-btn{width:2.5rem;height:2.5rem;justify-content:center;padding:0;border-radius:50%}
+.icon-btn.big{width:3.1rem;height:3.1rem;background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.icon-btn.big svg{width:1.4em;height:1.4em}
+.spacer{flex:1}
+/* welcome */
+.welcome{max-width:880px;margin:0 auto;padding:clamp(1.5rem,6vw,4.5rem) 1.25rem 4rem}
+.demo{background:var(--screen);border-radius:var(--r-l);padding:clamp(1.5rem,5vw,3rem) 1.5rem 1.6rem;text-align:center;position:relative;overflow:hidden}
+.demo::after{content:"";position:absolute;inset:auto 0 0 0;height:4px;background:repeating-linear-gradient(90deg,var(--telop) 0 40px,transparent 40px 46px);opacity:.75}
+.demo .telop-text{font-size:clamp(1.6rem,5vw,2.8rem);line-height:2.1;margin:0}
+.demo .en{color:#c8cee0;margin:.2rem 0 0;font-size:1rem}
+.welcome h1{font-size:1.35rem;margin:2rem 0 .3rem;font-weight:700}
+.welcome p.lead{margin:0 0 1.4rem;color:var(--mute);max-width:62ch}
+.starts{display:grid;grid-template-columns:1fr auto;gap:.75rem;align-items:stretch}
+.starts .yt-form{max-width:none}
+.starts .yt-form input{padding:.75rem 1rem;font-size:1.05rem}
+.starts .btn{padding:.7rem 1.1rem}
+.keys-note{margin-top:1.4rem;padding:.9rem 1rem;border-left:3px solid var(--telop);background:var(--paper);border-radius:0 var(--r-m) var(--r-m) 0;font-size:.95rem}
+.keys-note ul{margin:.3rem 0 0;padding-left:1.1rem}
+.recent h2{font-size:1rem;margin:2.2rem 0 .5rem;font-weight:700}
+.ep-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.ep-list li{display:flex;gap:.75rem;align-items:center;padding:.6rem .2rem;border-bottom:1px solid var(--line)}
+.ep-list .ep-open{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer}
+.ep-list .ep-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.ep-list .ep-meta{display:block;color:var(--mute);font-size:.82rem}
+.kind{font-size:.72rem;border:1px solid var(--line);border-radius:4px;padding:0 .35rem;color:var(--mute);flex:none}
+/* stage */
+.stage{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,1fr);gap:1.25rem;padding:1rem max(1rem,env(safe-area-inset-left)) 2rem;max-width:1500px;margin:0 auto}
+.left{position:sticky;top:calc(var(--hdr,64px) + .6rem);align-self:start;display:flex;flex-direction:column;gap:.8rem;max-height:calc(100dvh - var(--hdr,64px) - 1.2rem);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.left>*{flex:none}
+.screen{background:var(--screen);border-radius:var(--r-l);overflow:hidden;position:relative}
+.vbox{position:relative;aspect-ratio:16/9;background:#000}
+.vbox>div,.vbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.screen .title-strip{color:#c8cee0;font-size:.85rem;padding:.9rem 1.1rem 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.telop{padding:.6rem 1.1rem 1rem;min-height:6.2rem;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.telop .telop-text{font-size:clamp(1.25rem,2.3vw,1.95rem);line-height:2.05;margin:0}
+.telop .ten{color:#c8cee0;margin:.1rem 0 0;font-size:.98rem;line-height:1.45}
+.telop.empty .telop-text{color:#9aa4bd;text-shadow:none;font-weight:500;font-size:1rem}
+.is-audio .telop{min-height:12rem}
+.relink{padding:1rem 1.1rem;color:#e6e9f1;font-size:.92rem;border-top:1px solid var(--screen-2)}
+.relink .btn{margin-top:.5rem}
+.scrub-wrap{display:flex;align-items:center;gap:.6rem;font-size:.8rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.scrub{position:relative;flex:1;height:22px}
+.scrub .track{position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.scrub .seg{position:absolute;top:0;bottom:0;background:var(--mute);opacity:.35}
+.scrub .seg.ready{background:var(--telop);opacity:1}
+.scrub .seg.working{background:var(--telop);opacity:.5;animation:pulse 1.2s ease-in-out infinite alternate}
+.scrub .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--fog)}
+.scrub input{position:absolute;inset:0;width:100%;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}
+.scrub input::-webkit-slider-runnable-track{height:22px;background:transparent}
+.scrub input::-moz-range-track{height:22px;background:transparent}
+.scrub input::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:4px;border-radius:50%;background:var(--ink);border:2px solid var(--paper)}
+.scrub input::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--ink);border:2px solid var(--paper)}
+@keyframes pulse{from{opacity:.25}to{opacity:.7}}
+@media (prefers-reduced-motion:reduce){.scrub .seg.working{animation:none}}
+.transport{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center}
+.transport .group{display:flex;gap:.3rem;align-items:center}
+.seg-ctl{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden;background:var(--paper)}
+.seg-ctl button{border:0;background:none;padding:.35rem .55rem;cursor:pointer;font-size:.85rem;font-variant-numeric:tabular-nums}
+.seg-ctl button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg-ctl button+button{border-left:1px solid var(--line)}
+.lbl{font-size:.78rem;color:var(--mute);margin-right:.15rem}
+.speed-sel{display:none;border:1px solid var(--line);border-radius:var(--r-m);background:var(--paper);padding:.3rem .4rem;font-size:.85rem}
+/* shadow */
+.shadow{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l);padding:.9rem 1rem}
+.shadow-head{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.shadow-head strong{font-weight:700;margin-right:auto}
+.shadow-sent{margin:.5rem 0;font-size:1.05rem;line-height:2}
+.shadow-actions{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.rec-btn[aria-pressed="true"]{background:var(--rec);border-color:var(--rec);color:#fff}
+.meter{height:4px;background:var(--line);border-radius:2px;margin:.6rem 0 0;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--rec)}
+canvas.wave{width:100%;height:44px;display:block;margin-top:.6rem}
+.diff{margin-top:.6rem;font-size:1.02rem;line-height:1.9}
+.diff .hit{color:var(--ok)}
+.diff .miss{color:var(--rec);text-decoration:underline wavy;text-underline-offset:3px}
+.diff .heard{display:block;color:var(--mute);font-size:.88rem}
+/* right column */
+.right{min-width:0;display:flex;flex-direction:column}
+.rail{position:sticky;top:var(--hdr,64px);z-index:5;background:var(--fog);padding:.2rem 0 .6rem;display:flex;flex-direction:column;gap:.5rem;border-bottom:1px solid var(--line)}
+.ep-head{display:flex;align-items:center;gap:.5rem;min-width:0}
+.ep-head h2{font-size:1.05rem;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.chunks{display:flex;gap:.35rem;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.chunk{flex:none;display:flex;align-items:center;gap:.4rem;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:.25rem .7rem;font-size:.82rem;cursor:pointer;font-variant-numeric:tabular-nums}
+.chunk .dot{width:.55rem;height:.55rem;border-radius:50%;border:1.5px solid var(--mute)}
+.chunk.ready .dot{background:var(--telop);border-color:var(--telop-ink)}
+.chunk.working .dot{background:var(--telop);opacity:.6;animation:pulse 1s infinite alternate}
+.chunk.partial .dot,.chunk.error .dot{border-color:var(--rec);background:transparent}
+.chunk[aria-current="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.tools{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center}
+.menu{position:relative}
+.menu>summary{list-style:none}
+.menu>summary::-webkit-details-marker{display:none}
+.menu-pop{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-m);padding:.35rem;min-width:240px;box-shadow:0 10px 30px rgba(10,16,32,.18)}
+.menu-pop button,.menu-pop label{display:block;width:100%;text-align:left;border:0;background:none;padding:.5rem .6rem;border-radius:var(--r-s);cursor:pointer;font-size:.92rem}
+.menu-pop button:hover,.menu-pop label:hover{background:var(--fog)}
+.sync-ctl{display:inline-flex;align-items:center;gap:.15rem;font-size:.8rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.state{margin:.8rem 0;padding:1rem 1.1rem;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-l)}
+.state h3{margin:0 0 .3rem;font-size:1rem}
+.state p{margin:.2rem 0 .7rem;color:var(--mute);font-size:.92rem}
+.state .row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.progress{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:.6rem 0 .3rem}
+.progress i{display:block;height:100%;background:var(--telop);width:0;transition:width .3s}
+.fineprint{font-size:.8rem;color:var(--mute)}
+.lines{list-style:none;margin:0;padding:0}
+.line{display:grid;grid-template-columns:3.6rem minmax(0,1fr);gap:0 .6rem;padding:.55rem .6rem .55rem .5rem;border-left:3px solid transparent;border-bottom:1px solid var(--line);position:relative}
+.line.on{border-left-color:var(--telop);background:var(--tint)}
+.line .t{background:none;border:0;padding:.35rem 0 0;color:var(--mute);font-size:.78rem;cursor:pointer;text-align:left;font-variant-numeric:tabular-nums;align-self:start}
+.line .t:hover{color:var(--ink);text-decoration:underline}
+.line .body{min-width:0;cursor:pointer}
+.line .jp{font-size:1.12rem;line-height:2.15;margin:0;word-break:normal;overflow-wrap:anywhere}
+.line .en{margin:0 0 .15rem;color:var(--mute);font-size:.93rem;line-height:1.45}
+.line .acts{grid-column:2;display:flex;gap:.25rem;flex-wrap:wrap;margin-top:.25rem;opacity:0;transition:opacity .15s}
+.line:hover .acts,.line.on .acts,.line:focus-within .acts{opacity:1}
+@media (hover:none){.line .acts{opacity:1}}
+.line .acts .btn{padding:.12rem .5rem;font-size:.8rem;border-radius:var(--r-s)}
+.line .star[aria-pressed="true"]{background:var(--telop);color:var(--telop-ink);border-color:var(--telop-ink)}
+.line.raw .jp{color:var(--mute)}
+rt{font-size:.52em;color:var(--mute);font-weight:500;letter-spacing:0}
+.furi-hide .fr::before{display:none}
+.furi-hover .lines .fr::before,.furi-hover .shadow .fr::before{visibility:hidden}
+.furi-hover .lines .line:hover .fr::before,.furi-hover .lines .line.on .fr::before,.furi-hover .lines .line.reveal .fr::before,.furi-hover .shadow:hover .fr::before{visibility:visible}
+.trans-hide .line .en,.trans-hide .telop .ten{display:none}
+.trans-blur .line .en,.trans-blur .telop .ten{filter:blur(5px);transition:filter .15s;cursor:pointer}
+.trans-blur .line .en:hover,.trans-blur .line.reveal .en,.trans-blur .telop:hover .ten{filter:none}
+.sub{grid-column:2;margin:.4rem 0 .2rem;padding:.6rem .75rem;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-m);font-size:.9rem}
+.sub h4{margin:.1rem 0 .3rem;font-size:.85rem;font-weight:700}
+.vocab-row{display:grid;grid-template-columns:auto 1fr;gap:.1rem .8rem;align-items:baseline}
+.vocab-row .w{font-weight:700;font-size:1rem}
+.vocab-row .r{color:var(--mute);font-size:.8rem;margin-left:.3rem;font-weight:400}
+.gram .gist{margin:0 0 .5rem}
+.gram .parts{display:flex;flex-wrap:wrap;gap:.3rem;margin:0 0 .6rem;padding:0;list-style:none}
+.gram .parts li{border:1px solid var(--line);border-radius:var(--r-s);padding:.15rem .45rem;background:var(--fog);font-size:.85rem}
+.gram .parts li span{display:block;color:var(--mute);font-size:.72rem}
+.gram .pt{margin:.45rem 0;padding-left:.7rem;border-left:2px solid var(--telop)}
+.gram .pt b{font-size:1rem}
+.gram .lvl{font-size:.72rem;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;margin-left:.35rem;color:var(--mute)}
+.empty-note{color:var(--mute);padding:2rem 1rem;text-align:center}
+/* dialogs */
+dialog{overflow:auto;border:1px solid var(--line);border-radius:var(--r-l);background:var(--paper);color:var(--ink);padding:0;width:min(680px,calc(100vw - 1.5rem));max-height:calc(100dvh - 2rem)}
+dialog::backdrop{background:rgba(12,17,32,.55)}
+.dlg-head{display:flex;align-items:center;gap:.5rem;padding:.9rem 1.1rem;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:2}
+.dlg-head h2{margin:0;font-size:1.1rem;flex:1}
+.dlg-body{padding:.4rem 1.1rem 1.2rem}
+.dlg-foot{display:flex;gap:.5rem;justify-content:flex-end;padding:.8rem 1.1rem;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--paper)}
+fieldset{border:0;border-top:1px solid var(--line);margin:1rem 0 0;padding:.9rem 0 0}
+legend{font-weight:700;padding:0 .4rem 0 0;font-size:1rem}
+.field{display:grid;grid-template-columns:11rem minmax(0,1fr);gap:.4rem .8rem;align-items:center;margin:.55rem 0}
+.field>label{font-size:.9rem}
+.field input,.field select{width:100%;border:1px solid var(--line);border-radius:var(--r-s);background:var(--fog);padding:.42rem .6rem}
+.field .help,.help{grid-column:2;font-size:.8rem;color:var(--mute);margin:-.15rem 0 0}
+.check{display:flex;gap:.55rem;align-items:flex-start;margin:.55rem 0;font-size:.92rem}
+.check input{margin-top:.3rem}
+.keyrow{display:flex;gap:.3rem}
+.keyrow input{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem}
+.status-ok{color:var(--ok)} .status-bad{color:var(--rec)} .status-warn{color:var(--warn)}
+details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6rem 0}
+.vocab-table{width:100%;border-collapse:collapse;font-size:.92rem}
+.vocab-table td{border-bottom:1px solid var(--line);padding:.45rem .3rem;vertical-align:top}
+.vocab-table td:first-child{white-space:nowrap;font-weight:700}
+.vocab-table .ex{color:var(--mute);font-size:.82rem;cursor:pointer}
+/* toasts */
+.toasts{position:fixed;left:50%;bottom:max(1rem,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;flex-direction:column;gap:.5rem;z-index:100;width:min(560px,calc(100vw - 1.5rem))}
+.toast{background:var(--ink);color:var(--paper);border-radius:var(--r-m);padding:.7rem .9rem;display:flex;gap:.6rem;align-items:flex-start;font-size:.92rem;box-shadow:0 10px 30px rgba(10,16,32,.3)}
+.toast.err{border-left:4px solid var(--rec)}
+.toast .msg{flex:1;white-space:pre-line}
+.toast button{background:none;border:1px solid currentColor;color:inherit;border-radius:var(--r-s);padding:.1rem .5rem;cursor:pointer;font-size:.82rem}
+/* responsive */
+@media (max-width:980px){
+  .stage{grid-template-columns:1fr;gap:.6rem;padding-top:.5rem}
+  .bar{position:relative}
+  .left{position:sticky;top:0;z-index:8;background:var(--fog);padding:.4rem 0;gap:.45rem;max-height:none;overflow:visible}
+  .is-yt .telop{display:none}
+  .is-audio .telop{min-height:6.5rem}
+  .rail{top:auto;position:static}
+  .shadow{max-height:40vh;overflow:auto}
+}
+@media (max-width:640px){
+  .bar{flex-wrap:wrap}
+  .bar .yt-form{order:5;flex-basis:100%;max-width:none}
+  .hide-sm{display:none}
+  .icon-btn{width:2.2rem;height:2.2rem}
+  .icon-btn.big{width:2.7rem;height:2.7rem}
+  .transport{gap:.35rem}
+  .transport .btn.small{padding:.3rem .5rem}
+  .speed .seg-ctl{display:none}
+  .speed-sel{display:inline-block!important}
+  .field{grid-template-columns:1fr}
+  .field .help,.help{grid-column:1}
+  .starts{grid-template-columns:1fr}
+  .line{grid-template-columns:2.9rem minmax(0,1fr)}
+  .line .jp{font-size:1.05rem}
+  .transport .speed .lbl{display:none}
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="mark telop-text" href="./" lang="ja" aria-label="Kikitori home">聞き取り</a>
+  <form class="yt-form" id="ytFormTop" autocomplete="off">
+    <input id="ytInputTop" type="text" inputmode="url" placeholder="Paste a YouTube link" aria-label="YouTube link">
+    <button class="btn primary" type="submit">Load</button>
+  </form>
+  <span class="spacer hide-sm"></span>
+  <label class="btn" for="fileInput" title="Open an audio file (MP3, M4A, WAV…)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <span class="hide-sm">Open audio</span></label>
+  <input id="fileInput" type="file" accept="audio/*,video/mp4,.mp3,.m4a,.m4b,.wav,.aac,.ogg,.oga,.opus,.flac,.webm,.mp4" hidden>
+  <button class="btn" id="libBtn" type="button" title="Library">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H18"/></svg>
+    <span class="hide-sm">Library</span></button>
+  <button class="btn icon-btn" id="setBtn" type="button" aria-label="Settings" title="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+
+<main id="main">
+  <section class="welcome" id="welcome">
+    <div class="demo" aria-hidden="true">
+      <p class="telop-text ja" lang="ja"><span class="fr" data-r="き">聞</span>き<span class="fr" data-r="と">取</span>れなかったら、もう<span class="fr" data-r="いちど">一度</span>。</p>
+      <p class="en">Didn't catch it? Once more.</p>
+    </div>
+    <h1>Listen sentence by sentence</h1>
+    <p class="lead">Load a Japanese YouTube video or an audio file. Each 30-minute part is transcribed only when you play it, with furigana, an English translation and key vocabulary for every sentence. Click a line to jump there, loop it, or record yourself shadowing it.</p>
+    <div class="starts">
+      <form class="yt-form" id="ytFormHero" autocomplete="off">
+        <input id="ytInputHero" type="text" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube link">
+        <button class="btn primary" type="submit">Load video</button>
+      </form>
+      <label class="btn" for="fileInput">Open audio file</label>
+    </div>
+    <div class="keys-note" id="keysNote"></div>
+    <div class="recent" id="recentWrap" hidden>
+      <h2>Recent</h2>
+      <ul class="ep-list" id="recentList"></ul>
+    </div>
+  </section>
+
+  <section class="stage" id="stage" hidden>
+    <div class="left">
+      <div class="screen" id="screen">
+        <div class="vbox" id="vbox" hidden><div id="ytMount"></div></div>
+        <div class="title-strip" id="audioTitle" hidden></div>
+        <div class="telop empty" id="telop" aria-live="off">
+          <p class="telop-text ja" lang="ja" id="telopJa">Press play</p>
+          <p class="ten" id="telopEn"></p>
+        </div>
+        <div class="relink" id="relink" hidden></div>
+        <audio id="audioEl" preload="metadata" playsinline></audio>
+      </div>
+      <div class="scrub-wrap">
+        <span id="tCur">0:00</span>
+        <div class="scrub"><div class="track" id="scrubTrack"></div><input id="scrub" type="range" min="0" max="1" step="0.1" value="0" aria-label="Seek"></div>
+        <span id="tDur">0:00</span>
+      </div>
+      <div class="transport" id="transport">
+        <div class="group">
+          <button class="btn icon-btn" id="prevBtn" type="button" aria-label="Previous sentence" title="Previous sentence (←)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+          <button class="btn icon-btn big" id="playBtn" type="button" aria-label="Play" title="Play / pause (Space)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" id="playIcon"><path d="M7 4v16l13-8z"/></svg></button>
+          <button class="btn icon-btn" id="nextBtn" type="button" aria-label="Next sentence" title="Next sentence (→)"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+          <button class="btn icon-btn" id="replayBtn" type="button" aria-label="Replay sentence" title="Replay sentence (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+        </div>
+        <div class="group">
+          <button class="btn small" id="loopBtn" type="button" aria-pressed="false" title="Loop current sentence (L)">Loop<span class="hide-sm"> sentence</span></button>
+          <button class="btn small" id="pauseAfterBtn" type="button" aria-pressed="false" title="Pause after every sentence (P)">Pause<span class="hide-sm"> after each</span></button>
+        </div>
+        <div class="group speed"><span class="lbl">Speed</span><div class="seg-ctl" id="speedCtl" role="group" aria-label="Playback speed"></div><select class="speed-sel" id="speedSel" aria-label="Playback speed"></select></div>
+        <div class="group">
+          <div class="seg-ctl" role="group" aria-label="Furigana"><button type="button" id="furiBtn" title="Furigana: show / on hover / hide (F)">ふりがな</button></div>
+          <div class="seg-ctl" role="group" aria-label="Translation"><button type="button" id="transBtn" title="Translation: show / blur / hide (T)">English</button></div>
+          <button class="btn small" id="shadowBtn" type="button" aria-pressed="false" title="Record &amp; compare (M)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>Shadow</button>
+        </div>
+      </div>
+      <div class="shadow" id="shadowPanel" hidden>
+        <div class="shadow-head">
+          <strong>Record &amp; compare</strong>
+          <div class="seg-ctl" role="group" aria-label="Shadowing mode">
+            <button type="button" id="modeAfter" aria-pressed="true" title="Hear the sentence, then speak">Listen, then speak</button>
+            <button type="button" id="modeAlong" aria-pressed="false" title="Speak along with the audio (use headphones)">Speak along</button>
+          </div>
+        </div>
+        <p class="shadow-sent ja" lang="ja" id="shadowSent">Pick a sentence first.</p>
+        <div class="shadow-actions">
+          <button class="btn rec-btn" id="recBtn" type="button" aria-pressed="false">Record</button>
+          <button class="btn" id="playOrigBtn" type="button">Play original</button>
+          <button class="btn" id="playMineBtn" type="button" disabled>Play mine</button>
+          <button class="btn" id="compareBtn" type="button" disabled>Compare</button>
+          <button class="btn" id="checkBtn" type="button" disabled title="Transcribe your recording and compare the text">Check words</button>
+        </div>
+        <div class="meter"><i id="recMeter"></i></div>
+        <canvas class="wave" id="recWave" width="600" height="44" hidden></canvas>
+        <div class="diff" id="diffOut"></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="rail">
+        <div class="ep-head">
+          <span class="kind" id="epKind"></span>
+          <h2 id="epTitle"></h2>
+          <details class="menu" id="epMenu">
+            <summary class="btn small" aria-label="Episode options">More</summary>
+            <div class="menu-pop">
+              <button type="button" data-act="vocab">Vocabulary in this part…</button>
+              <button type="button" data-act="retranscribe">Transcribe this part again</button>
+              <button type="button" data-act="reannotate">Redo translations for this part</button>
+              <label for="subsInput">Import subtitles (.srt / .vtt)…</label>
+              <label for="attachInput" id="attachLabel">Use my own audio file for transcripts…</label>
+              <button type="button" data-act="rename">Rename…</button>
+              <button type="button" data-act="export">Export episode (.json)</button>
+              <button type="button" data-act="copyLink">Copy link to this video</button>
+            </div>
+          </details>
+        </div>
+        <div class="chunks" id="chunks" aria-label="Parts"></div>
+        <div class="tools">
+          <button class="btn small" id="starOnlyBtn" type="button" aria-pressed="false" title="Show starred sentences only">★ Starred</button>
+          <button class="btn small" id="followBtn" type="button" aria-pressed="true" title="Keep the current sentence in view">Follow</button>
+          <span class="spacer"></span>
+          <span class="sync-ctl" title="Shift all sentence times if highlighting runs early or late">Timing
+            <button class="btn small quiet" id="syncMinus" type="button" aria-label="Highlight earlier">−</button>
+            <span id="syncVal">0.0s</span>
+            <button class="btn small quiet" id="syncPlus" type="button" aria-label="Highlight later">+</button>
+          </span>
+        </div>
+      </div>
+      <div id="chunkState"></div>
+      <ol class="lines" id="lines" aria-label="Transcript"></ol>
+    </div>
+  </section>
+</main>
+<input id="subsInput" type="file" accept=".srt,.vtt,text/vtt" hidden>
+<input id="attachInput" type="file" accept="audio/*,video/mp4,.mp3,.m4a,.wav,.ogg,.opus,.flac,.webm" hidden>
+<input id="importInput" type="file" accept=".json,application/json" multiple hidden>
+<input id="relinkInput" type="file" accept="audio/*,video/mp4,.mp3,.m4a,.wav,.aac,.ogg,.opus,.flac,.webm" hidden>
+
+<dialog id="settingsDlg" aria-labelledby="setTitle">
+  <form method="dialog" id="settingsForm">
+    <div class="dlg-head"><h2 id="setTitle">Settings</h2><button class="btn quiet small" type="button" data-close>Close</button></div>
+    <div class="dlg-body">
+      <fieldset>
+        <legend>API keys</legend>
+        <p class="help" style="margin:0 0 .4rem">Keys stay in this browser and are sent only to the provider they belong to. They are never included in exports or library files. On GitHub Pages every repo under your username shares this storage, so lock them with a passphrase if you host other pages there.</p>
+        <div class="field"><label for="k_groq">Groq</label><div class="keyrow"><input id="k_groq" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_…"><button class="btn small" type="button" data-test="groq">Test</button></div><p class="help">Speech-to-text with Whisper. Free tier available at console.groq.com.</p></div>
+        <div class="field"><label for="k_gemini">Google Gemini</label><div class="keyrow"><input id="k_gemini" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…"><button class="btn small" type="button" data-test="gemini">Test</button></div><p class="help">Translations, furigana, grammar, and YouTube transcription without captions. Restrict the key to your site's URL in Google Cloud Console.</p></div>
+        <div class="field"><label for="k_supadata">Supadata</label><div class="keyrow"><input id="k_supadata" type="password" autocomplete="off" spellcheck="false"></div><p class="help">Optional. Fetches existing YouTube captions (1 credit per video, 100 free each month).</p></div>
+        <div class="field"><label for="k_openai">OpenAI</label><div class="keyrow"><input id="k_openai" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…"><button class="btn small" type="button" data-test="openai">Test</button></div></div>
+        <div class="field"><label for="k_openrouter">OpenRouter</label><div class="keyrow"><input id="k_openrouter" type="password" autocomplete="off" spellcheck="false"><button class="btn small" type="button" data-test="openrouter">Test</button></div></div>
+        <div class="field"><label for="k_custom">Custom endpoint</label><div class="keyrow"><input id="k_custom" type="password" autocomplete="off" spellcheck="false"></div><p class="help">For any OpenAI-compatible service or your own proxy.</p></div>
+        <div class="check"><input type="checkbox" id="showKeys"><label for="showKeys">Show keys</label></div>
+        <div class="field"><label>Key lock</label><div id="lockState"></div></div>
+      </fieldset>
+      <fieldset>
+        <legend>Speech-to-text</legend>
+        <div class="field"><label for="sttProvider">Provider</label><select id="sttProvider"><option value="groq">Groq (Whisper)</option><option value="openai">OpenAI (whisper-1)</option><option value="custom">Custom OpenAI-compatible</option></select></div>
+        <div class="field"><label for="sttModel">Model</label><input id="sttModel" list="sttModels" spellcheck="false"><datalist id="sttModels"></datalist><p class="help">whisper-large-v3-turbo costs about $0.04 per audio hour on Groq; whisper-large-v3 is slower and slightly more accurate ($0.11/h).</p></div>
+        <details class="adv"><summary>Advanced</summary>
+          <div class="field"><label for="sttBase">Base URL</label><input id="sttBase" spellcheck="false" placeholder="Default"></div>
+          <div class="field"><label for="sttMaxMB">Max upload (MB)</label><input id="sttMaxMB" type="number" min="5" max="95" step="1"><p class="help">Files are split to stay under this. Groq's free tier allows 25&nbsp;MB per request.</p></div>
+        </details>
+      </fieldset>
+      <fieldset>
+        <legend>Translations, furigana &amp; grammar</legend>
+        <div class="field"><label for="llmProvider">Provider</label><select id="llmProvider"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="groq">Groq</option><option value="openrouter">OpenRouter</option><option value="custom">Custom OpenAI-compatible</option></select></div>
+        <div class="field"><label for="llmModel">Model</label><input id="llmModel" list="llmModels" spellcheck="false"><datalist id="llmModels"></datalist><p class="help" id="llmHelp"></p></div>
+        <div class="field"><label for="level">Your level</label><input id="level" spellcheck="false" placeholder="N2 → N1"><p class="help">Vocabulary picks skip words below this level.</p></div>
+        <details class="adv"><summary>Advanced</summary>
+          <div class="field"><label for="llmBase">Base URL</label><input id="llmBase" spellcheck="false" placeholder="Default"></div>
+          <div class="field"><label for="llmConc">Parallel requests</label><input id="llmConc" type="number" min="1" max="6" step="1"></div>
+        </details>
+      </fieldset>
+      <fieldset>
+        <legend>YouTube transcripts</legend>
+        <div class="field"><label for="ytSource">Source</label><select id="ytSource"><option value="auto">Captions first, then Gemini</option><option value="supadata">Captions only (Supadata)</option><option value="gemini">Gemini only</option></select><p class="help">Captions are fetched once per video. Gemini listens to the video itself (public videos only) and usually costs a few cents per part; since August 2026 some accounts are billed for the whole video's audio on each request, which makes very long videos pricier. You can also import a subtitle file or attach your own audio from the episode's More menu.</p></div>
+        <div class="field"><label for="ytGeminiModel">Gemini model</label><input id="ytGeminiModel" list="geminiModels" spellcheck="false"><datalist id="geminiModels"><option value="gemini-3.1-flash-lite"><option value="gemini-3.5-flash-lite"><option value="gemini-2.5-flash-lite"><option value="gemini-3.8-flash"></datalist></div>
+      </fieldset>
+      <fieldset>
+        <legend>Processing &amp; playback</legend>
+        <div class="check"><input type="checkbox" id="autoProcess"><label for="autoProcess">Transcribe a part automatically when I start playing it</label></div>
+        <div class="check"><input type="checkbox" id="prefetch"><label for="prefetch">Prepare the next part when 5 minutes remain</label></div>
+        <div class="field"><label for="chunkMin">Part length (min)</label><input id="chunkMin" type="number" min="5" max="60" step="5"><p class="help">Applies to newly added episodes.</p></div>
+        <div class="check"><input type="checkbox" id="copyAudio"><label for="copyAudio">Copy audio files into the library folder (so other computers can play them)</label></div>
+        <p class="help" style="margin-top:.6rem">Shortcuts: Space play/pause · ← → previous/next sentence · R replay · L loop · P pause after each · F furigana · T translation · G grammar · M record</p>
+      </fieldset>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" id="saveSettings" value="save" type="submit">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="libraryDlg" aria-labelledby="libTitle">
+  <div class="dlg-head"><h2 id="libTitle">Library</h2><button class="btn quiet small" type="button" data-close>Close</button></div>
+  <div class="dlg-body">
+    <fieldset style="border-top:0;margin-top:0">
+      <legend>Sync folder</legend>
+      <div id="folderState"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Files</legend>
+      <div class="row" style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <label class="btn" for="importInput">Import .json…</label>
+        <button class="btn" type="button" id="exportAllBtn">Export everything</button>
+      </div>
+      <p class="help" style="margin-top:.5rem">On iPhone and iPad, export and choose Save to Files › iCloud Drive; import from the same place on another device. Audio files aren't included, so you'll be asked to pick the matching file once per device.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Episodes</legend>
+      <ul class="ep-list" id="libList"></ul>
+    </fieldset>
+  </div>
+</dialog>
+
+<dialog id="unlockDlg" aria-labelledby="unlockTitle">
+  <form method="dialog" id="unlockForm">
+    <div class="dlg-head"><h2 id="unlockTitle">Unlock API keys</h2></div>
+    <div class="dlg-body">
+      <p id="unlockMsg">Your keys are locked with a passphrase.</p>
+      <div class="field"><label for="unlockPass">Passphrase</label><input id="unlockPass" type="password" autocomplete="current-password"></div>
+      <p class="help status-bad" id="unlockErr"></p>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" value="ok" type="submit">Unlock</button></div>
+  </form>
+</dialog>
+
+<dialog id="vocabDlg" aria-labelledby="vocabTitle">
+  <div class="dlg-head"><h2 id="vocabTitle">Vocabulary</h2><button class="btn small" type="button" id="copyTsvBtn">Copy as TSV</button><button class="btn quiet small" type="button" data-close>Close</button></div>
+  <div class="dlg-body"><table class="vocab-table"><tbody id="vocabBody"></tbody></table></div>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* =========================================================================
+   Kikitori — single-file Japanese listening & shadowing player
+   Static, no backend. Bring your own API keys.
+   ========================================================================= */
+
+/* ---------- utilities ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return e;
+}
+function fmt(t) {
+  t = Math.max(0, Math.floor(t || 0));
+  const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
+function fnv(str) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
+const slug = s => String(s || 'episode').normalize('NFKC').replace(/[\\/:*?"<>|#%{}^~[\]`]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'episode';
+const FURI_RE = /\{([^{}|]+)\|([^{}]+)\}/g;
+function furiHtml(f) {
+  f = String(f ?? ''); let out = '', last = 0;
+  for (const m of f.matchAll(FURI_RE)) { out += escHtml(f.slice(last, m.index)) + `<span class="fr" data-r="${escHtml(m[2])}">${escHtml(m[1])}</span>`; last = m.index + m[0].length; }
+  return out + escHtml(f.slice(last));
+}
+const plainOf = f => String(f ?? '').replace(FURI_RE, '$1');
+const normJa = s => String(s ?? '').replace(/[\s、。，．,.!?！？「」『』（）()\[\]【】…‥・:：;；"“”'’‘〜~♪]/g, '');
+const prefersReducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+class UserError extends Error { constructor(msg, action) { super(msg); this.action = action; } }
+class ApiError extends Error { constructor(msg, status) { super(msg); this.status = status; } }
+
+/* ---------- settings ---------- */
+const PROVIDERS = {
+  stt: {
+    groq: { base: 'https://api.groq.com/openai/v1', key: 'groq', models: ['whisper-large-v3-turbo', 'whisper-large-v3'], def: 'whisper-large-v3-turbo' },
+    openai: { base: 'https://api.openai.com/v1', key: 'openai', models: ['whisper-1'], def: 'whisper-1' },
+    custom: { base: '', key: 'custom', models: ['whisper-large-v3-turbo', 'whisper-1'], def: 'whisper-large-v3-turbo' },
+  },
+  llm: {
+    gemini: { base: 'https://generativelanguage.googleapis.com', key: 'gemini', models: ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'], def: 'gemini-3.1-flash-lite',
+      help: '3.1 Flash-Lite is the cheapest model open to new projects ($0.25 in / $1.50 out per million tokens). 2.5 Flash-Lite is cheaper but only works on accounts that already used it.' },
+    openai: { base: 'https://api.openai.com/v1', key: 'openai', models: ['gpt-5-mini', 'gpt-5-nano', 'gpt-4.1-mini', 'gpt-4o-mini'], def: 'gpt-5-mini', help: 'gpt-5-mini balances accuracy and cost; gpt-5-nano is cheaper but weaker on readings.' },
+    groq: { base: 'https://api.groq.com/openai/v1', key: 'groq', models: ['openai/gpt-oss-120b', 'qwen/qwen3-32b'], def: 'openai/gpt-oss-120b', help: 'Fast and uses your Groq key, but Japanese readings are less reliable than Gemini.' },
+    openrouter: { base: 'https://openrouter.ai/api/v1', key: 'openrouter', models: ['google/gemini-3.1-flash-lite', 'google/gemini-2.5-flash-lite', 'openai/gpt-5-mini'], def: 'google/gemini-3.1-flash-lite', help: 'Any model OpenRouter offers. Prices include a small markup.' },
+    custom: { base: '', key: 'custom', models: [], def: '', help: 'Any OpenAI-compatible /chat/completions endpoint.' },
+  },
+};
+const PRICE = {
+  stt: { 'whisper-large-v3-turbo': 0.04, 'whisper-large-v3': 0.111, 'whisper-1': 0.36 },
+  llm: { 'gemini-2.5-flash-lite': [0.10, 0.40], 'gemini-3.1-flash-lite': [0.25, 1.50], 'gemini-3.5-flash-lite': [0.30, 2.50], 'gemini-3.8-flash': [0.75, 3.75],
+    'gpt-5-nano': [0.05, 0.40], 'gpt-5-mini': [0.25, 2.00], 'gpt-4.1-mini': [0.40, 1.60], 'gpt-4o-mini': [0.15, 0.60], 'openai/gpt-oss-120b': [0.15, 0.60] },
+  geminiAudio: { 'gemini-2.5-flash-lite': 0.30, 'gemini-3.1-flash-lite': 0.50, 'gemini-3.5-flash-lite': 0.30, 'gemini-3.8-flash': 0.75 },
+};
+const DEFAULTS = {
+  sttProvider: 'groq', sttModel: 'whisper-large-v3-turbo', sttBase: '', sttMaxMB: 24,
+  llmProvider: 'gemini', llmModel: 'gemini-3.1-flash-lite', llmBase: '', llmConc: 2, level: 'N2 → N1',
+  ytSource: 'auto', ytGeminiModel: 'gemini-3.1-flash-lite',
+  autoProcess: true, prefetch: false, chunkMin: 30, copyAudio: false,
+  furi: 'show', trans: 'show', pauseAfter: false, rate: 1, follow: true, shadowMode: 'after',
+};
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.warn(e); } },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const S = Object.assign({}, DEFAULTS, LS.get('kikitori.settings', {}));
+const saveSettings = () => LS.set('kikitori.settings', S);
+
+/* ---------- API keys (optionally passphrase-encrypted) ---------- */
+const KEY_LABEL = { groq: 'Groq', openai: 'OpenAI', gemini: 'Google Gemini', supadata: 'Supadata', openrouter: 'OpenRouter', custom: 'custom endpoint' };
+const b64 = u8 => btoa(String.fromCharCode(...new Uint8Array(u8)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pass, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function encryptJSON(obj, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await deriveKey(pass, salt), new TextEncoder().encode(JSON.stringify(obj)));
+  return { enc: 1, salt: b64(salt), iv: b64(iv), ct: b64(ct) };
+}
+async function decryptJSON(blob, pass) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(blob.iv) }, await deriveKey(pass, unb64(blob.salt)), unb64(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+const Keys = {
+  mem: {}, pass: null, encrypted: false, blob: null,
+  load() {
+    const raw = LS.get('kikitori.keys', null);
+    if (raw && raw.enc) { this.encrypted = true; this.blob = raw; this.mem = null; }
+    else { this.encrypted = false; this.mem = raw || {}; }
+  },
+  get locked() { return this.encrypted && !this.mem; },
+  get(n) { return (this.mem && this.mem[n]) || ''; },
+  async save(obj) {
+    this.mem = obj;
+    if (this.encrypted) { this.blob = await encryptJSON(obj, this.pass); LS.set('kikitori.keys', this.blob); }
+    else LS.set('kikitori.keys', obj);
+  },
+  async lock(pass) { this.pass = pass; this.encrypted = true; await this.save(this.mem || {}); },
+  async unlock(pass) { this.mem = await decryptJSON(this.blob, pass); this.pass = pass; },
+  async removeLock() { this.encrypted = false; this.pass = null; await this.save(this.mem || {}); },
+  forget() { LS.del('kikitori.keys'); this.mem = {}; this.encrypted = false; this.pass = null; this.blob = null; },
+};
+Keys.load();
+function promptUnlock(msg) {
+  return new Promise((resolve, reject) => {
+    const dlg = $('#unlockDlg');
+    $('#unlockMsg').textContent = msg || 'Your API keys are locked with a passphrase.';
+    $('#unlockErr').textContent = ''; $('#unlockPass').value = ''; dlg.returnValue = '';
+    const onClose = async () => {
+      if (dlg.returnValue !== 'ok') { dlg.removeEventListener('close', onClose); return reject(new UserError('Keys are still locked.')); }
+      try { await Keys.unlock($('#unlockPass').value); dlg.removeEventListener('close', onClose); renderKeysNote(); resolve(); }
+      catch { $('#unlockErr').textContent = 'That passphrase didn\'t work.'; dlg.returnValue = ''; dlg.showModal(); }
+    };
+    dlg.addEventListener('close', onClose);
+    dlg.showModal();
+  });
+}
+async function needKey(name) {
+  if (Keys.locked) await promptUnlock();
+  const k = Keys.get(name);
+  if (!k) throw new UserError(`Add your ${KEY_LABEL[name]} API key in Settings first.`, 'settings');
+  return k;
+}
+const hasKey = n => Keys.locked ? !!(Keys.blob) : !!Keys.get(n);
+
+/* ---------- IndexedDB ---------- */
+const DB = {
+  p: null,
+  open() {
+    return this.p ||= new Promise((res, rej) => {
+      const r = indexedDB.open('kikitori', 1);
+      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('episodes', { keyPath: 'id' }); d.createObjectStore('blobs'); d.createObjectStore('kv'); };
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  },
+  async tx(store, mode, fn) {
+    const d = await this.open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, mode); const req = fn(t.objectStore(store)); let out;
+      if (req) req.onsuccess = () => { out = req.result; };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error('Storage aborted'));
+    });
+  },
+  get(s, k) { return this.tx(s, 'readonly', st => st.get(k)); },
+  put(s, v, k) { return this.tx(s, 'readwrite', st => k === undefined ? st.put(v) : st.put(v, k)); },
+  del(s, k) { return this.tx(s, 'readwrite', st => st.delete(k)); },
+  all(s) { return this.tx(s, 'readonly', st => st.getAll()); },
+};
+
+/* ---------- toasts ---------- */
+function toast(msg, { err = false, action, label, ms } = {}) {
+  const t = el('div', { class: 'toast' + (err ? ' err' : ''), role: err ? 'alert' : 'status' }, el('span', { class: 'msg' }, msg));
+  if (action) t.append(el('button', { type: 'button', onclick: () => { action(); t.remove(); } }, label || 'Open'));
+  t.append(el('button', { type: 'button', 'aria-label': 'Dismiss', onclick: () => t.remove() }, '×'));
+  $('#toasts').append(t);
+  setTimeout(() => t.remove(), ms || (err ? 12000 : 4500));
+}
+function showError(e) {
+  console.error(e);
+  const msg = e?.message || String(e);
+  if (e instanceof UserError && e.action === 'settings') toast(msg, { err: true, action: openSettings, label: 'Settings' });
+  else toast(msg, { err: true });
+}
+
+/* ---------- HTTP ---------- */
+async function apiFetch(url, opts = {}, { label = 'Request', retries = 2, timeout = 240000 } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), timeout);
+    let r;
+    try { r = await fetch(url, { ...opts, signal: ac.signal }); }
+    catch (e) {
+      clearTimeout(timer);
+      if (attempt < retries) { await sleep(1200 * 2 ** attempt); continue; }
+      if (e.name === 'AbortError') throw new ApiError(`${label} timed out.`);
+      throw new ApiError(`${label} couldn't reach the server. Check your connection. If it keeps failing, the provider may be blocking browser requests (CORS); set a proxy in Settings › Advanced.`);
+    }
+    clearTimeout(timer);
+    if (r.ok || r.status === 202 || r.status === 206) return r;
+    if ((r.status === 429 || r.status >= 500) && attempt < retries) {
+      const ra = parseFloat(r.headers.get('retry-after'));
+      await sleep(ra ? Math.min(ra, 60) * 1000 : 2000 * 2 ** attempt); continue;
+    }
+    let detail = '';
+    try { const txt = await r.text(); try { const j = JSON.parse(txt); detail = j.error?.message || j.message || j.error || txt; } catch { detail = txt; } } catch {}
+    detail = String(typeof detail === 'object' ? JSON.stringify(detail) : detail).slice(0, 300);
+    const hint = r.status === 401 || r.status === 403 ? ' Check the API key in Settings.' : r.status === 429 ? ' Rate limit reached; try again in a minute.' : '';
+    throw new ApiError(`${label} failed (${r.status}). ${detail}${hint}`, r.status);
+  }
+}
+function parseJSONLoose(text) {
+  if (text == null) throw new Error('Empty response');
+  let t = String(text).trim();
+  try { return JSON.parse(t); } catch {}
+  t = t.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  try { return JSON.parse(t); } catch {}
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+  throw new Error('The model didn\'t return valid JSON');
+}
+
+/* ---------- speech-to-text ---------- */
+function sttCfg() {
+  const p = PROVIDERS.stt[S.sttProvider] || PROVIDERS.stt.groq;
+  return { base: (S.sttBase || p.base).replace(/\/$/, ''), keyName: p.key, model: S.sttModel || p.def };
+}
+const HALLUCINATIONS = /ご視聴ありがとうございました|チャンネル登録|お疲れ様でした。$|字幕|次回もお楽しみに/;
+async function sttTranscribe(blob, name, prompt) {
+  const cfg = sttCfg();
+  if (!cfg.base) throw new UserError('Set a base URL for the custom speech-to-text provider in Settings.', 'settings');
+  const key = await needKey(cfg.keyName);
+  const fd = new FormData();
+  fd.append('file', blob, name);
+  fd.append('model', cfg.model);
+  fd.append('language', 'ja');
+  fd.append('response_format', 'verbose_json');
+  fd.append('temperature', '0');
+  fd.append('timestamp_granularities[]', 'segment');
+  fd.append('timestamp_granularities[]', 'word');
+  if (prompt) fd.append('prompt', prompt.slice(-160));
+  const r = await apiFetch(cfg.base + '/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + key }, body: fd }, { label: 'Speech-to-text', retries: 3, timeout: 600000 });
+  const j = await r.json();
+  const segs = (j.segments || []).filter(sg => {
+    const t = (sg.text || '').trim(); if (!t) return false;
+    if ((sg.compression_ratio || 0) > 2.6) return false;
+    if ((sg.no_speech_prob || 0) > 0.6 && (sg.avg_logprob ?? 0) < -0.8) return false;
+    if (HALLUCINATIONS.test(t) && (sg.no_speech_prob || 0) > 0.25) return false;
+    return true;
+  }).map(sg => ({ s: +sg.start || 0, e: +sg.end || 0, t: sg.text.trim() }));
+  if (!segs.length && j.text && !(j.segments || []).length) segs.push({ s: 0, e: j.duration || 0, t: j.text.trim() });
+  const words = (j.words || []).map(w => ({ t: String(w.word || ''), s: +w.start || 0, e: +w.end || 0 }));
+  return { segments: segs, words, duration: j.duration };
+}
+
+/* ---------- LLM (Gemini native + OpenAI-compatible) ---------- */
+function llmCfg() {
+  const p = PROVIDERS.llm[S.llmProvider] || PROVIDERS.llm.gemini;
+  return { provider: S.llmProvider, base: (S.llmBase || p.base).replace(/\/$/, ''), keyName: p.key, model: S.llmModel || p.def };
+}
+function geminiThinking(model) {
+  if (/gemini-2\.5-(flash|flash-lite)/.test(model)) return { thinkingBudget: 0 };
+  if (/gemini-[3-9].*pro/.test(model)) return { thinkingLevel: 'low' };
+  if (/gemini-[3-9]/.test(model)) return { thinkingLevel: 'minimal' };
+  return null;
+}
+async function geminiCall({ model, system, parts, schema, base, maxTokens = 32000, temperature = 0.2, extraGen = {} }) {
+  const key = await needKey('gemini');
+  base = (base || PROVIDERS.llm.gemini.base).replace(/\/$/, '');
+  let useSchema = !!schema, thinking = geminiThinking(model); extraGen = { ...extraGen };
+  const isG3 = /gemini-[3-9]/.test(model);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const gen = { maxOutputTokens: maxTokens, responseMimeType: 'application/json', ...extraGen };
+    if (!isG3) gen.temperature = temperature;
+    if (useSchema) gen.responseSchema = schema;
+    if (thinking) gen.thinkingConfig = thinking;
+    const body = { contents: [{ role: 'user', parts }], generationConfig: gen };
+    if (system) body.systemInstruction = { parts: [{ text: system }] };
+    try {
+      const r = await apiFetch(`${base}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body),
+      }, { label: 'Gemini', retries: 3, timeout: 300000 });
+      const j = await r.json();
+      if (j.promptFeedback?.blockReason) throw new ApiError('Gemini blocked the request: ' + j.promptFeedback.blockReason);
+      const cand = j.candidates?.[0];
+      const text = (cand?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+      if (cand?.finishReason === 'MAX_TOKENS') { const e = new Error('truncated'); e.truncated = true; e.partial = text; throw e; }
+      if (!text) throw new ApiError('Gemini returned an empty answer' + (cand?.finishReason ? ` (${cand.finishReason})` : ''));
+      return { json: parseJSONLoose(text), usage: j.usageMetadata };
+    } catch (e) {
+      if (e.status === 400 && thinking && /think/i.test(e.message)) { thinking = null; continue; }
+      if (e.status === 400 && extraGen.mediaResolution && /media_?resolution/i.test(e.message)) { delete extraGen.mediaResolution; continue; }
+      if (e.status === 400 && useSchema && /schema|response_?schema|Unknown name/i.test(e.message)) { useSchema = false; continue; }
+      throw e;
+    }
+  }
+}
+async function openaiChatJSON({ system, user, maxTokens }) {
+  const cfg = llmCfg();
+  if (!cfg.base) throw new UserError('Set a base URL for the custom provider in Settings.', 'settings');
+  const key = await needKey(cfg.keyName);
+  const headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key };
+  if (cfg.provider === 'openrouter') { headers['X-Title'] = 'Kikitori'; headers['HTTP-Referer'] = location.origin; }
+  let useFormat = true;
+  let reasoning = /^(gpt-5|o\d)/.test(cfg.model) ? 'minimal' : /gpt-oss/.test(cfg.model) ? 'low' : null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const body = { model: cfg.model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] };
+    if (useFormat) body.response_format = { type: 'json_object' };
+    if (reasoning) body.reasoning_effort = reasoning; else if (!/^(gpt-5|o\d)/.test(cfg.model)) body.temperature = 0.2;
+    try {
+      const r = await apiFetch(cfg.base + '/chat/completions', { method: 'POST', headers, body: JSON.stringify(body) }, { label: 'Translation model', retries: 3, timeout: 300000 });
+      const j = await r.json();
+      const ch = j.choices?.[0];
+      if (ch?.finish_reason === 'length') { const e = new Error('truncated'); e.truncated = true; throw e; }
+      return { json: parseJSONLoose(ch?.message?.content || ''), usage: j.usage };
+    } catch (e) {
+      if (e.status === 400 && reasoning && /reasoning/i.test(e.message)) { reasoning = null; continue; }
+      if (e.status === 400 && useFormat && /response_format|json/i.test(e.message)) { useFormat = false; continue; }
+      throw e;
+    }
+  }
+}
+async function llmJSON({ system, user, schema, maxTokens }) {
+  const cfg = llmCfg();
+  if (cfg.provider === 'gemini') return geminiCall({ model: cfg.model, base: S.llmBase, system, parts: [{ text: user }], schema, maxTokens });
+  return openaiChatJSON({ system, user, maxTokens });
+}
+
+/* ---------- prompts ---------- */
+const ANNOT_SYSTEM = level => `You turn raw Japanese transcript cues into study material for an English-speaking learner at level ${level}.
+
+Input: numbered cues from speech recognition or captions. Cues may break mid-sentence, lack punctuation, or contain recognition errors.
+
+Return JSON: {"s":[{"c":[first,last],"f":"…","e":"…","v":[{"w":"…","r":"…","m":"…"}]}]}
+
+Rules
+- Group the cues into natural sentences, in order. "c" is the inclusive range of cue numbers the sentence comes from. Every cue belongs to some sentence. Consecutive sentences may share a cue when a sentence ends inside it. Split long run-on speech at natural clause breaks (aim for at most about 60 characters per sentence).
+- "f": the sentence as natural written Japanese with punctuation, faithful to what was said. Give every word that contains kanji furigana in the form {漢字|かんじ}: braces wrap only the kanji, the reading is in hiragana, and okurigana stays outside, e.g. {食|た}べる, {勉強|べんきょう}する, {今日|きょう}, {一人|ひとり}, {大人|おとな}しい. Never put braces around kana-only text. Choose the reading that fits this context.
+- Fix obvious recognition errors only when the intended words are clear from context. Drop pure noise like [音楽].
+- "e": a natural, accurate English translation of the sentence.
+- "v": up to 3 words or expressions from this sentence worth learning at ${level}; skip basic vocabulary. "w" is the dictionary form, "r" its reading in hiragana, "m" a short English meaning that fits this context. Use [] when nothing qualifies.
+- Output only the JSON.`;
+const ANNOT_SCHEMA = {
+  type: 'OBJECT', required: ['s'],
+  properties: { s: { type: 'ARRAY', items: { type: 'OBJECT', required: ['c', 'f', 'e', 'v'], properties: {
+    c: { type: 'ARRAY', items: { type: 'INTEGER' } }, f: { type: 'STRING' }, e: { type: 'STRING' },
+    v: { type: 'ARRAY', items: { type: 'OBJECT', required: ['w', 'r', 'm'], properties: { w: { type: 'STRING' }, r: { type: 'STRING' }, m: { type: 'STRING' } } } },
+  } } } },
+};
+const GRAMMAR_SYSTEM = level => `You are a precise Japanese grammar tutor for an English-speaking learner at level ${level}. Explain the grammar of one sentence taken from real native speech.
+Return JSON: {"gist":"…","parts":[{"jp":"…","role":"…"}],"points":[{"form":"…","level":"…","meaning":"…","here":"…"}],"nuance":"…"}
+- gist: one or two sentences on how the sentence is built.
+- parts: the sentence split into 3–8 meaningful chunks, in order, each with its grammatical role in plain English.
+- points: the 1–4 grammar patterns most worth studying (skip trivial particles unless used unusually). "form" is the pattern as a dictionary lists it (e.g. 〜わけにはいかない); "level" is the JLPT level (N1–N5) or "—"; "meaning" is its general meaning; "here" explains how it works in this sentence.
+- nuance: register, tone, omitted words, or speaker attitude a learner might miss. Empty string if nothing notable.
+Write explanations in English; keep Japanese for the forms and chunks.`;
+const GRAMMAR_SCHEMA = {
+  type: 'OBJECT', required: ['gist', 'parts', 'points', 'nuance'],
+  properties: {
+    gist: { type: 'STRING' }, nuance: { type: 'STRING' },
+    parts: { type: 'ARRAY', items: { type: 'OBJECT', required: ['jp', 'role'], properties: { jp: { type: 'STRING' }, role: { type: 'STRING' } } } },
+    points: { type: 'ARRAY', items: { type: 'OBJECT', required: ['form', 'level', 'meaning', 'here'], properties: { form: { type: 'STRING' }, level: { type: 'STRING' }, meaning: { type: 'STRING' }, here: { type: 'STRING' } } } },
+  },
+};
+const YT_SCHEMA = { type: 'OBJECT', required: ['segments'], properties: { segments: { type: 'ARRAY', items: { type: 'OBJECT', required: ['s', 'e', 't'], properties: { s: { type: 'NUMBER' }, e: { type: 'NUMBER' }, t: { type: 'STRING' } } } } } };
+
+/* ---------- YouTube transcripts ---------- */
+function ytIdFrom(s) {
+  s = String(s || '').trim();
+  const m = s.match(/(?:v=|youtu\.be\/|shorts\/|live\/|embed\/|\/v\/)([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  return /^[A-Za-z0-9_-]{11}$/.test(s) ? s : null;
+}
+function cleanCueText(t) {
+  return String(t || '').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;|&apos;/g, "'")
+    .replace(/[\[［][^\]］]{1,10}[\]］]/g, '').replace(/[♪♫]+/g, '').replace(/\s+/g, ' ').trim();
+}
+function tidyCues(cues) {
+  cues = cues.map(c => ({ s: +c.s, e: +c.e, t: cleanCueText(c.t) })).filter(c => c.t && isFinite(c.s)).sort((a, b) => a.s - b.s);
+  for (let i = 0; i < cues.length; i++) {
+    const n = cues[i + 1];
+    if (!(cues[i].e > cues[i].s)) cues[i].e = n ? n.s : cues[i].s + 2;
+    if (n && cues[i].e > n.s && n.s > cues[i].s) cues[i].e = n.s;
+  }
+  return cues;
+}
+async function supadataCaptions(videoId) {
+  const key = await needKey('supadata');
+  const url = `https://api.supadata.ai/v1/transcript?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}&lang=ja&mode=native`;
+  const headers = { 'x-api-key': key };
+  let r = await apiFetch(url, { headers }, { label: 'Supadata', retries: 2 });
+  if (r.status === 206) throw new UserError('This video has no captions on YouTube.');
+  let j = await r.json();
+  if (r.status === 202 && j.jobId) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < 240000) {
+      await sleep(1500);
+      const rr = await apiFetch(`https://api.supadata.ai/v1/transcript/${encodeURIComponent(j.jobId)}`, { headers }, { label: 'Supadata', retries: 2 });
+      const jj = await rr.json();
+      if (jj.status === 'completed' || Array.isArray(jj.content)) { j = jj; break; }
+      if (jj.status === 'failed') throw new ApiError('Supadata couldn\'t get captions: ' + (jj.error?.message || jj.error || 'failed'));
+    }
+  }
+  if (!Array.isArray(j.content)) throw new ApiError('Supadata returned no caption cues.');
+  const lang = String(j.lang || '').toLowerCase();
+  if (lang && !lang.startsWith('ja')) { const e = new UserError(`No Japanese captions (found: ${[lang, ...(j.availableLangs || [])].filter((v, i, a) => a.indexOf(v) === i).join(', ')}).`); e.noJa = true; throw e; }
+  return tidyCues(j.content.map(c => ({ s: (+c.offset || 0) / 1000, e: ((+c.offset || 0) + (+c.duration || 0)) / 1000, t: c.text })));
+}
+async function geminiYouTube(ep, s, e, prog) {
+  const model = S.ytGeminiModel || 'gemini-3.1-flash-lite';
+  const out = []; let from = s;
+  for (let round = 0; round < 5 && from < e - 15; round++) {
+    prog?.(`Gemini is listening to ${fmt(from)}–${fmt(e)}…`);
+    const parts = [
+      { fileData: { fileUri: `https://www.youtube.com/watch?v=${ep.ytId}` }, videoMetadata: { startOffset: `${Math.floor(from)}s`, endOffset: `${Math.ceil(e)}s`, fps: 0.2 } },
+      { text: `Transcribe the Japanese speech in this video between ${fmt(from)} and ${fmt(e)}, word for word.
+Return JSON {"segments":[{"s":start,"e":end,"t":"text"}]} where s and e are seconds measured from the START OF THE FULL VIDEO (not from the clip).
+One segment per sentence or short phrase, at most about 12 seconds each, in order. Use natural Japanese punctuation. Do not translate. No speaker labels, no descriptions of music or sounds.` },
+    ];
+    let res;
+    const call = () => geminiCall({ model, parts, schema: YT_SCHEMA, maxTokens: 60000, temperature: 0, extraGen: { mediaResolution: 'MEDIA_RESOLUTION_LOW' } });
+    try { res = await call(); }
+    catch (err) {
+      if (err.status === 400 && /fps|video_?metadata/i.test(err.message) && parts[0].videoMetadata.fps) { delete parts[0].videoMetadata.fps; res = await call(); }
+      else if (err.truncated && err.partial) { try { res = { json: parseJSONLoose(err.partial.replace(/,\s*\{[^}]*$/, '') + ']}') }; } catch { throw err; } }
+      else throw err;
+    }
+    let segs = (res.json.segments || []).map(x => ({ s: +x.s, e: +x.e, t: String(x.t || '') })).filter(x => isFinite(x.s) && x.t.trim());
+    if (!segs.length) break;
+    const inWin = segs.filter(x => x.s >= from - 10 && x.s <= e + 10).length / segs.length;
+    const relWin = segs.filter(x => x.s >= -2 && x.s <= (e - from) + 10).length / segs.length;
+    if (from > 30 && inWin < 0.5 && relWin > 0.8) segs = segs.map(x => ({ s: x.s + from, e: x.e + from, t: x.t }));
+    segs = segs.filter(x => x.s >= from - 2 && x.s < e + 2);
+    if (!segs.length) break;
+    out.push(...segs);
+    const last = segs[segs.length - 1];
+    if (last.e >= e - 20 || last.s <= from) break;
+    from = Math.max(last.e, last.s + 1);
+  }
+  if (!out.length) throw new ApiError('Gemini didn\'t return any speech for this part.');
+  return tidyCues(out);
+}
+function parseSubtitles(text) {
+  text = String(text).replace(/\r/g, '').replace(/^﻿/, '');
+  const tre = /(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})\s*-->\s*(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{1,3})/;
+  const ts = (h, m, s, ms) => (+h || 0) * 3600 + (+m) * 60 + (+s) + (+String(ms).padEnd(3, '0')) / 1000;
+  const cues = []; let recent = [];
+  for (const block of text.split(/\n{2,}/)) {
+    const lines = block.split('\n'); const i = lines.findIndex(l => tre.test(l));
+    if (i < 0) continue;
+    const m = lines[i].match(tre);
+    const body = lines.slice(i + 1).map(l => cleanCueText(l.replace(/<[^>]+>/g, '').replace(/\{\\[^}]*\}/g, ''))).filter(Boolean);
+    const fresh = body.filter(l => !recent.includes(l));
+    if (fresh.length) { cues.push({ s: ts(m[1], m[2], m[3], m[4]), e: ts(m[5], m[6], m[7], m[8]), t: fresh.join(' ') }); recent = [...recent, ...fresh].slice(-3); }
+  }
+  return tidyCues(cues);
+}
+
+/* ---------- audio cutting (no dependencies) ---------- */
+const MP3_BR = {
+  '3-3': [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448],
+  '3-2': [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],
+  '3-1': [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+  '2-3': [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
+  '2-2': [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+};
+MP3_BR['2-1'] = MP3_BR['2-2'];
+const MP3_SR = { 3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
+function mp3Frame(b0, b1, b2) {
+  if (b0 !== 0xFF || (b1 & 0xE0) !== 0xE0) return null;
+  const ver = (b1 >> 3) & 3, layer = (b1 >> 1) & 3;
+  if (ver === 1 || layer === 0) return null;
+  const bri = (b2 >> 4) & 15, sri = (b2 >> 2) & 3, pad = (b2 >> 1) & 1;
+  if (bri === 0 || bri === 15 || sri === 3) return null;
+  const sr = MP3_SR[ver][sri]; const kbps = MP3_BR[`${ver === 3 ? 3 : 2}-${layer}`][bri];
+  let len, spf;
+  if (layer === 3) { len = (Math.floor(12 * kbps * 1000 / sr) + pad) * 4; spf = 384; }
+  else if (layer === 2) { len = Math.floor(144 * kbps * 1000 / sr) + pad; spf = 1152; }
+  else if (ver === 3) { len = Math.floor(144 * kbps * 1000 / sr) + pad; spf = 1152; }
+  else { len = Math.floor(72 * kbps * 1000 / sr) + pad; spf = 576; }
+  return len >= 21 ? { len, dur: spf / sr } : null;
+}
+const Cut = {
+  mp3Idx: new Map(), sources: new Map(),
+  async sniff(blob) {
+    const b = new Uint8Array(await blob.slice(0, 64).arrayBuffer());
+    const s = (o, n) => String.fromCharCode(...b.slice(o, o + n));
+    let o = 0;
+    if (s(0, 3) === 'ID3') {
+      o = 10 + ((b[6] & 0x7f) << 21 | (b[7] & 0x7f) << 14 | (b[8] & 0x7f) << 7 | (b[9] & 0x7f)) + ((b[5] & 0x10) ? 10 : 0);
+      const p = new Uint8Array(await blob.slice(o, o + 4).arrayBuffer());
+      if (p[0] === 0xFF && (p[1] & 0xF6) === 0xF0) return 'adts';
+      return 'mp3';
+    }
+    if (s(0, 4) === 'RIFF' && s(8, 4) === 'WAVE') return 'wav';
+    if (s(4, 4) === 'ftyp') return 'mp4';
+    if (s(0, 4) === 'OggS') return 'ogg';
+    if (s(0, 4) === 'fLaC') return 'flac';
+    if (b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3) return 'webm';
+    if (b[0] === 0xFF && (b[1] & 0xF6) === 0xF0) return 'adts';
+    if (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0) return 'mp3';
+    return 'unknown';
+  },
+  /* Build a per-second byte index of an MP3 by walking its frame headers. */
+  async mp3Index(id, blob, prog) {
+    if (this.mp3Idx.has(id)) return this.mp3Idx.get(id);
+    const head = new Uint8Array(await blob.slice(0, 10).arrayBuffer());
+    let pos = 0;
+    if (head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33) pos = 10 + ((head[6] & 0x7f) << 21 | (head[7] & 0x7f) << 14 | (head[8] & 0x7f) << 7 | (head[9] & 0x7f)) + ((head[5] & 0x10) ? 10 : 0);
+    const WIN = 1 << 21; let buf = null, bs = 0;
+    const load = async p => { bs = p; buf = new Uint8Array(await blob.slice(p, Math.min(blob.size, p + WIN)).arrayBuffer()); };
+    const offs = []; let t = 0, mark = 0, lastProg = 0;
+    while (pos + 4 <= blob.size) {
+      if (!buf || pos < bs || pos + 4 > bs + buf.length) await load(pos);
+      let o = pos - bs;
+      const f = mp3Frame(buf[o], buf[o + 1], buf[o + 2]);
+      if (f) {
+        while (t >= mark) { offs.push(pos); mark++; }
+        t += f.dur; pos += f.len;
+        if (pos - lastProg > 16e6) { lastProg = pos; prog?.(pos / blob.size); await sleep(0); }
+        continue;
+      }
+      // lost sync: search for two consecutive valid headers
+      let found = -1;
+      for (let k = o + 1; k + 4 <= buf.length; k++) {
+        if (buf[k] !== 0xFF) continue;
+        const g = mp3Frame(buf[k], buf[k + 1], buf[k + 2]); if (!g) continue;
+        const nk = k + g.len;
+        if (nk + 3 > buf.length) { if (bs + buf.length >= blob.size) { found = k; break; } continue; }
+        if (mp3Frame(buf[nk], buf[nk + 1], buf[nk + 2])) { found = k; break; }
+      }
+      if (found >= 0) { pos = bs + found; continue; }
+      if (bs + buf.length >= blob.size) break;
+      pos = bs + Math.max(o + 1, buf.length - 4096); buf = null;
+    }
+    if (!offs.length) throw new Error('No MP3 frames found');
+    const ix = { offs, dur: t, end: pos };
+    this.mp3Idx.set(id, ix);
+    return ix;
+  },
+  mp3Pieces(blob, ix, s, e, maxBytes, maxSec) {
+    const k0 = clamp(Math.floor(s), 0, ix.offs.length - 1), k1 = Math.max(k0 + 1, Math.ceil(Math.min(e, ix.dur)));
+    const off = k => k < ix.offs.length ? ix.offs[k] : ix.end;
+    for (let n = Math.max(1, Math.ceil((k1 - k0) / maxSec)); n < 200; n++) {
+      const pieces = [];
+      for (let j = 0; j < n; j++) {
+        const ps = k0 + Math.round((k1 - k0) * j / n), pe = k0 + Math.round((k1 - k0) * (j + 1) / n);
+        pieces.push({ s: ps, e: Math.min(pe, ix.dur), a: off(ps), b: off(pe) });
+      }
+      if (pieces.every(p => p.b - p.a <= maxBytes)) return pieces.map(p => ({ s: p.s, e: p.e, make: async () => ({ blob: blob.slice(p.a, p.b, 'audio/mpeg'), name: 'part.mp3' }) }));
+    }
+    throw new Error('Could not split this MP3 small enough');
+  },
+};
+/* PCM sources: { dur, read(t0,t1) -> {ch: Float32Array[], sr} } */
+async function wavSource(blob) {
+  let pos = 12, fmtc = null, dataOff = 0, dataLen = 0;
+  const four = dv => String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
+  while (pos + 8 <= blob.size) {
+    const hb = new DataView(await blob.slice(pos, pos + 8).arrayBuffer());
+    const id = four(hb), len = hb.getUint32(4, true);
+    if (id === 'fmt ') {
+      const fb = new DataView(await blob.slice(pos + 8, pos + 8 + Math.min(len, 40)).arrayBuffer());
+      let format = fb.getUint16(0, true);
+      if (format === 0xFFFE && len >= 26) format = fb.getUint16(24, true);
+      fmtc = { format, ch: fb.getUint16(2, true), sr: fb.getUint32(4, true), align: fb.getUint16(12, true), bits: fb.getUint16(14, true) };
+    } else if (id === 'data') {
+      dataOff = pos + 8; dataLen = (len === 0 || len === 0xFFFFFFFF || dataOff + len > blob.size) ? blob.size - dataOff : len; break;
+    }
+    pos += 8 + len + (len & 1);
+  }
+  if (!fmtc || !dataOff) throw new Error('Unreadable WAV header');
+  const f = fmtc;
+  if (!((f.format === 1 && [8, 16, 24, 32].includes(f.bits)) || (f.format === 3 && f.bits === 32))) throw new Error('Unsupported WAV encoding');
+  const bps = f.bits / 8, frames = Math.floor(dataLen / f.align);
+  return {
+    kind: 'wav', dur: frames / f.sr,
+    async read(t0, t1) {
+      const f0 = clamp(Math.floor(t0 * f.sr), 0, frames), f1 = clamp(Math.ceil(t1 * f.sr), f0, frames), n = f1 - f0;
+      const dv = new DataView(await blob.slice(dataOff + f0 * f.align, dataOff + f1 * f.align).arrayBuffer());
+      const ch = Array.from({ length: f.ch }, () => new Float32Array(n));
+      for (let i = 0; i < n; i++) for (let c = 0; c < f.ch; c++) {
+        const o = i * f.align + c * bps; let v;
+        if (f.format === 3) v = dv.getFloat32(o, true);
+        else if (f.bits === 16) v = dv.getInt16(o, true) / 32768;
+        else if (f.bits === 8) v = (dv.getUint8(o) - 128) / 128;
+        else if (f.bits === 24) v = (dv.getUint8(o) | dv.getUint8(o + 1) << 8 | dv.getInt8(o + 2) << 16) / 8388608;
+        else v = dv.getInt32(o, true) / 2147483648;
+        ch[c][i] = v;
+      }
+      return { ch, sr: f.sr };
+    },
+  };
+}
+let _dctx = null;
+function decodeAudio(ab) {
+  _dctx ||= new OfflineAudioContext(1, 16000, 16000);
+  return new Promise((res, rej) => { const p = _dctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); });
+}
+function trimDecoded(buf, tStart, t0, t1) {
+  const sr = buf.sampleRate, a = clamp(Math.round((t0 - tStart) * sr), 0, buf.length), b = clamp(Math.round((t1 - tStart) * sr), a, buf.length);
+  const ch = []; for (let c = 0; c < buf.numberOfChannels; c++) ch.push(buf.getChannelData(c).slice(a, b));
+  return { ch, sr };
+}
+/* MP4/M4A: read the sample table, rebuild just the needed AAC frames as ADTS, decode that. */
+async function mp4Source(blob) {
+  let pos = 0, moov = null;
+  const str4 = (dv, o) => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
+  while (pos + 8 <= blob.size) {
+    const dv = new DataView(await blob.slice(pos, pos + 16).arrayBuffer());
+    let size = dv.getUint32(0); const type = str4(dv, 4);
+    if (size === 1) size = Number(dv.getBigUint64(8)); else if (size === 0) size = blob.size - pos;
+    if (size < 8) break;
+    if (type === 'moov') { moov = new DataView(await blob.slice(pos, pos + size).arrayBuffer()); break; }
+    pos += size;
+  }
+  if (!moov) throw new Error('MP4 has no moov box');
+  const kids = (start, end) => {
+    const out = []; let p = start;
+    while (p + 8 <= end) {
+      let sz = moov.getUint32(p); const ty = str4(moov, p + 4); let hl = 8;
+      if (sz === 1) { sz = Number(moov.getBigUint64(p + 8)); hl = 16; } else if (sz === 0) sz = end - p;
+      if (sz < 8 || p + sz > end) break;
+      out.push({ type: ty, body: p + hl, end: p + sz }); p += sz;
+    }
+    return out;
+  };
+  const find = (box, path) => { let cur = box; for (const ty of path) { cur = kids(cur.body, cur.end).find(b => b.type === ty); if (!cur) return null; } return cur; };
+  const root = { body: moov.getUint32(0) === 1 ? 16 : 8, end: moov.byteLength };
+  for (const trak of kids(root.body, root.end).filter(b => b.type === 'trak')) {
+    const hdlr = find(trak, ['mdia', 'hdlr']);
+    if (!hdlr || str4(moov, hdlr.body + 8) !== 'soun') continue;
+    const mdhd = find(trak, ['mdia', 'mdhd']); const ver = moov.getUint8(mdhd.body);
+    const timescale = moov.getUint32(mdhd.body + (ver === 1 ? 20 : 12));
+    const stbl = find(trak, ['mdia', 'minf', 'stbl']); if (!stbl) continue;
+    const g = ty => kids(stbl.body, stbl.end).find(b => b.type === ty);
+    const stsd = g('stsd'), stts = g('stts'), stsc = g('stsc'), stsz = g('stsz'), stco = g('stco'), co64 = g('co64');
+    if (!stsd || !stts || !stsc || !stsz || !(stco || co64)) throw new Error('Incomplete MP4 sample table');
+    const eStart = stsd.body + 8, eSize = moov.getUint32(eStart), eType = str4(moov, eStart + 4);
+    if (eType !== 'mp4a') throw new Error('Unsupported audio codec in MP4: ' + eType);
+    let esds = -1;
+    for (let p = eStart + 8; p + 4 < eStart + eSize; p++) if (moov.getUint32(p) === 0x65736473) { esds = p + 4; break; }
+    if (esds < 0) throw new Error('No esds in MP4');
+    // parse ES descriptors -> AudioSpecificConfig
+    let p = esds + 4, asc = null, oti = 0; const end = eStart + eSize;
+    const readLen = () => { let len = 0; for (let i = 0; i < 4; i++) { const b = moov.getUint8(p++); len = (len << 7) | (b & 0x7f); if (!(b & 0x80)) break; } return len; };
+    while (p < end) {
+      const tag = moov.getUint8(p++); const len = readLen(); const body = p;
+      if (tag === 0x03) { p += 2; const fl = moov.getUint8(p++); if (fl & 0x80) p += 2; if (fl & 0x40) p += 1 + moov.getUint8(p); if (fl & 0x20) p += 2; continue; }
+      if (tag === 0x04) { oti = moov.getUint8(p); p += 13; continue; }
+      if (tag === 0x05) { asc = [moov.getUint8(p), moov.getUint8(p + 1)]; break; }
+      p = body + len;
+    }
+    if (!asc) throw new Error('No AAC config in MP4');
+    if (oti && ![0x40, 0x66, 0x67, 0x68].includes(oti)) throw new Error('MP4 audio is not AAC');
+    const aot = asc[0] >> 3, freqIdx = ((asc[0] & 7) << 1) | (asc[1] >> 7), chan = (asc[1] >> 3) & 15;
+    if (aot === 31 || freqIdx > 12 || chan === 0 || chan > 7) throw new Error('Unsupported AAC layout');
+    const profile = (aot === 5 || aot === 29) ? 1 : aot - 1;
+    if (profile < 0 || profile > 3) throw new Error('Unsupported AAC profile');
+    // tables
+    const fixed = moov.getUint32(stsz.body + 4), n = moov.getUint32(stsz.body + 8);
+    const sizes = new Uint32Array(n); for (let i = 0; i < n; i++) sizes[i] = fixed || moov.getUint32(stsz.body + 12 + i * 4);
+    const times = new Float64Array(n + 1); { const cnt = moov.getUint32(stts.body + 4); let k = 0, acc = 0; for (let e = 0; e < cnt && k < n; e++) { const c = moov.getUint32(stts.body + 8 + e * 8), d = moov.getUint32(stts.body + 12 + e * 8); for (let j = 0; j < c && k < n; j++) { times[k++] = acc / timescale; acc += d; } } times[n] = acc / timescale; }
+    const co = stco || co64, nChunks = moov.getUint32(co.body + 4), chunkOff = new Float64Array(nChunks);
+    for (let i = 0; i < nChunks; i++) chunkOff[i] = stco ? moov.getUint32(co.body + 8 + i * 4) : Number(moov.getBigUint64(co.body + 8 + i * 8));
+    const offs = new Float64Array(n); { const cnt = moov.getUint32(stsc.body + 4); let si = 0; for (let e = 0; e < cnt; e++) { const first = moov.getUint32(stsc.body + 8 + e * 12), spc = moov.getUint32(stsc.body + 12 + e * 12); const next = e + 1 < cnt ? moov.getUint32(stsc.body + 8 + (e + 1) * 12) : nChunks + 1; for (let c = first; c < next && si < n; c++) { let off = chunkOff[c - 1]; for (let j = 0; j < spc && si < n; j++) { offs[si] = off; off += sizes[si]; si++; } } } }
+    const adts = len => { const L = len + 7, h = new Uint8Array(7); h[0] = 0xFF; h[1] = 0xF1; h[2] = (profile << 6) | (freqIdx << 2) | (chan >> 2); h[3] = ((chan & 3) << 6) | (L >> 11); h[4] = (L >> 3) & 0xFF; h[5] = ((L & 7) << 5) | 0x1F; h[6] = 0xFC; return h; };
+    const lower = t => { let a = 0, b = n; while (a < b) { const m = (a + b) >> 1; if (times[m] < t) a = m + 1; else b = m; } return a; };
+    return {
+      kind: 'mp4', dur: times[n],
+      async read(t0, t1) {
+        const i0 = Math.max(0, lower(t0 - 0.5) - 1), i1 = Math.min(n, lower(t1 + 0.5) + 1);
+        const parts = []; let total = 0;
+        for (let i = i0; i < i1;) {
+          let j = i + 1; while (j < i1 && offs[j] === offs[j - 1] + sizes[j - 1]) j++;
+          const u8 = new Uint8Array(await blob.slice(offs[i], offs[j - 1] + sizes[j - 1]).arrayBuffer());
+          let o = 0; for (let k = i; k < j; k++) { parts.push(adts(sizes[k]), u8.subarray(o, o + sizes[k])); o += sizes[k]; total += sizes[k] + 7; }
+          i = j;
+        }
+        const all = new Uint8Array(total); let w = 0; for (const x of parts) { all.set(x, w); w += x.length; }
+        const buf = await decodeAudio(all.buffer);
+        return trimDecoded(buf, times[i0], t0, t1);
+      },
+    };
+  }
+  throw new Error('No audio track in MP4');
+}
+async function fullSource(blob) {
+  const buf = await decodeAudio(await blob.arrayBuffer());
+  const n = buf.length, mono = new Float32Array(n), C = buf.numberOfChannels;
+  for (let c = 0; c < C; c++) { const d = buf.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / C; }
+  return { kind: 'full', dur: buf.duration, async read(t0, t1) { const a = clamp(Math.floor(t0 * buf.sampleRate), 0, n), b = clamp(Math.ceil(t1 * buf.sampleRate), a, n); return { ch: [mono.subarray(a, b)], sr: buf.sampleRate }; } };
+}
+async function toMono16k(ch, sr) {
+  if (!ch.length || !ch[0].length) return new Float32Array(0);
+  if (sr === 16000) {
+    if (ch.length === 1) return ch[0];
+    const m = new Float32Array(ch[0].length); for (const c of ch) for (let i = 0; i < m.length; i++) m[i] += c[i] / ch.length; return m;
+  }
+  const len = ch[0].length, outLen = Math.max(1, Math.round(len * 16000 / sr));
+  const ctx = new OfflineAudioContext(1, outLen, 16000);
+  const b = ctx.createBuffer(ch.length, len, sr); ch.forEach((c, i) => b.copyToChannel(c, i));
+  const src = ctx.createBufferSource(); src.buffer = b; src.connect(ctx.destination); src.start();
+  return (await ctx.startRendering()).getChannelData(0);
+}
+function wavBlob(pcm, sr) {
+  const h = new DataView(new ArrayBuffer(44)); const W = (o, s) => { for (let i = 0; i < s.length; i++) h.setUint8(o + i, s.charCodeAt(i)); };
+  W(0, 'RIFF'); h.setUint32(4, 36 + pcm.byteLength, true); W(8, 'WAVE'); W(12, 'fmt '); h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, 1, true);
+  h.setUint32(24, sr, true); h.setUint32(28, sr * 2, true); h.setUint16(32, 2, true); h.setUint16(34, 16, true); W(36, 'data'); h.setUint32(40, pcm.byteLength, true);
+  return new Blob([h, pcm], { type: 'audio/wav' });
+}
+async function encodeWavPiece(src, s, e, prog) {
+  const total = Math.max(1, Math.round((e - s) * 16000)), pcm = new Int16Array(total); let w = 0;
+  for (let t = s; t < e - 1e-3; t += 60) {
+    const t1 = Math.min(e, t + 60);
+    const { ch, sr } = await src.read(t, t1);
+    const mono = await toMono16k(ch, sr);
+    for (let i = 0; i < mono.length && w < total; i++) { const v = clamp(mono[i], -1, 1); pcm[w++] = v < 0 ? v * 32768 : v * 32767; }
+    prog?.((t1 - s) / (e - s));
+    await sleep(0);
+  }
+  return wavBlob(pcm.subarray(0, w), 16000);
+}
+const STT_EXT = { mp3: 'mp3', wav: 'wav', mp4: 'm4a', ogg: 'ogg', flac: 'flac', webm: 'webm' };
+async function planPieces(ep, blob, s, e, prog) {
+  const maxBytes = Math.max(4, +S.sttMaxMB || 24) * 1e6 * 0.97;
+  const maxSec = S.sttProvider === 'groq' ? 1800 : 1200;
+  const kind = await Cut.sniff(blob);
+  const dur = ep.duration || e;
+  if (s <= 0.5 && e >= dur - 0.5 && blob.size <= maxBytes && STT_EXT[kind] && dur <= maxSec) return [{ s: 0, e, make: async () => ({ blob, name: 'audio.' + STT_EXT[kind] }) }];
+  if (kind === 'mp3') {
+    try { const ix = await Cut.mp3Index(ep.id, blob, f => prog?.(`Indexing MP3 (${Math.round(f * 100)}%)…`)); return Cut.mp3Pieces(blob, ix, s, e, maxBytes, maxSec); }
+    catch (err) { console.warn('MP3 index failed, decoding instead', err); }
+  }
+  const pieceMax = Math.min(maxSec, 15 * 60, Math.floor((maxBytes - 100) / 32000));
+  const n = Math.max(1, Math.ceil((e - s) / pieceMax));
+  const getSrc = async (forceFull) => {
+    let src = Cut.sources.get(ep.id);
+    if (src && !(forceFull && src.kind !== 'full')) return src;
+    src = null;
+    if (!forceFull && kind === 'wav') src = await wavSource(blob).catch(err => (console.warn(err), null));
+    if (!forceFull && kind === 'mp4') src = await mp4Source(blob).catch(err => (console.warn(err), null));
+    if (!src) {
+      if ((ep.duration || 0) > 75 * 60) toast('This file has to be decoded in one go, which needs a lot of memory for long recordings. If it fails, convert it to MP3 or M4A first.');
+      prog?.('Decoding audio…');
+      src = await fullSource(blob);
+    }
+    Cut.sources.set(ep.id, src); return src;
+  };
+  return Array.from({ length: n }, (_, j) => {
+    const ps = s + (e - s) * j / n, pe = s + (e - s) * (j + 1) / n;
+    return { s: ps, e: pe, make: async p => {
+      let src = await getSrc(false);
+      try { return { blob: await encodeWavPiece(src, ps, pe, p), name: 'part.wav' }; }
+      catch (err) { if (src.kind === 'full') throw err; console.warn('Fast path failed, decoding whole file', err); src = await getSrc(true); return { blob: await encodeWavPiece(src, ps, pe, p), name: 'part.wav' }; }
+    } };
+  });
+}
+
+/* ---------- episodes ---------- */
+const Cache = new Map();
+function newEpisode(p) {
+  const now = Date.now();
+  return Object.assign({ v: 1, id: '', kind: 'audio', title: '', duration: 0, chunkSec: clamp(+S.chunkMin || 30, 5, 60) * 60, chunks: [], source: {}, sync: 0, pos: 0, posAt: 0, createdAt: now, updatedAt: now }, p);
+}
+function buildChunks(ep) {
+  const d = ep.duration; if (!d) return false;
+  const cs = ep.chunkSec || 1800; let n = Math.max(1, Math.ceil(d / cs));
+  if (n > 1 && d - (n - 1) * cs < 120) n--;
+  const old = ep.chunks || [], chunks = [];
+  for (let i = 0; i < n; i++) {
+    const start = i * cs, end = i === n - 1 ? d : (i + 1) * cs, o = old[i];
+    if (o && Math.abs(o.start - start) < 1) { o.i = i; o.end = end; chunks.push(o); } else chunks.push({ i, start, end, status: 'none' });
+  }
+  const changed = chunks.length !== old.length || chunks.some((c, i) => c.end !== old[i]?.end);
+  ep.chunks = chunks; return changed;
+}
+async function getEpisode(id) {
+  if (Cache.has(id)) return Cache.get(id);
+  const ep = await DB.get('episodes', id);
+  if (ep) Cache.set(id, ep);
+  return ep;
+}
+async function saveEpisode(ep, { bump = true, folder = true } = {}) {
+  if (bump) ep.updatedAt = Date.now();
+  Cache.set(ep.id, ep);
+  await DB.put('episodes', JSON.parse(JSON.stringify(ep)));
+  if (folder) Folder.queue(ep);
+}
+function chunkScore(c) { return !c ? -1 : c.status === 'ready' ? 3 : c.sentences?.length ? 2 : c.cues?.length ? 1 : 0; }
+function mergeEpisodes(a, b) {
+  if (!a) return b; if (!b) return a;
+  const newer = (b.updatedAt || 0) > (a.updatedAt || 0) ? b : a, older = newer === a ? b : a;
+  const m = JSON.parse(JSON.stringify(newer));
+  const len = Math.max(m.chunks?.length || 0, older.chunks?.length || 0);
+  m.chunks = Array.from({ length: len }, (_, i) => {
+    const x = newer.chunks?.[i], y = older.chunks?.[i];
+    if (!x) return y; if (!y) return x;
+    const sx = chunkScore(x), sy = chunkScore(y);
+    const pick = sx !== sy ? (sx > sy ? x : y) : ((y.meta?.at || 0) > (x.meta?.at || 0) ? y : x);
+    const other = pick === x ? y : x;
+    const out = JSON.parse(JSON.stringify(pick));
+    if (out.sentences && other.sentences) {
+      const byKey = new Map(other.sentences.map(s => [Math.round(s.s * 10) + '|' + plainOf(s.f).slice(0, 8), s]));
+      for (const s of out.sentences) { const o = byKey.get(Math.round(s.s * 10) + '|' + plainOf(s.f).slice(0, 8)); if (o) { if (!s.g && o.g) s.g = o.g; if (o.star && !s.star) s.star = o.star; } }
+    }
+    if (out.status === 'working') out.status = out.sentences?.length ? 'partial' : 'none';
+    return out;
+  });
+  if ((older.posAt || 0) > (m.posAt || 0)) { m.pos = older.pos; m.posAt = older.posAt; }
+  if (!m.source?.captions && older.source?.captions) m.source = { ...(m.source || {}), captions: older.source.captions };
+  return m;
+}
+async function deleteEpisode(id) {
+  Cache.delete(id); await DB.del('episodes', id); await DB.del('blobs', id).catch(() => {});
+  Cut.mp3Idx.delete(id); Cut.sources.delete(id);
+  await Folder.remove(id);
+  if (App.ep?.id === id) closeEpisode();
+}
+
+/* ---------- folder sync (File System Access API) ---------- */
+const Folder = {
+  supported: 'showDirectoryPicker' in window,
+  handle: null, status: 'none', names: new Map(), timers: new Map(), lastSync: 0, syncing: false,
+  async init() {
+    if (!this.supported) { this.status = 'unsupported'; return; }
+    try { this.handle = await DB.get('kv', 'dir'); } catch {}
+    if (!this.handle) { this.status = 'none'; return; }
+    const p = await this.handle.queryPermission({ mode: 'readwrite' }).catch(() => 'denied');
+    this.status = p === 'granted' ? 'ready' : 'need-permission';
+    if (this.status === 'ready') this.sync().catch(showError);
+    else toast(`Reconnect your library folder "${this.handle.name}" to keep it in sync.`, { action: () => this.reconnect().then(() => toast('Library folder reconnected.')).catch(showError), label: 'Reconnect', ms: 15000 });
+  },
+  async connect() {
+    const h = await window.showDirectoryPicker({ id: 'kikitori-library', mode: 'readwrite', startIn: 'documents' });
+    this.handle = h; await DB.put('kv', h, 'dir'); this.status = 'ready'; this.names.clear();
+    await this.sync(); toast(`Library folder connected: ${h.name}`);
+  },
+  async reconnect() {
+    if (!this.handle) return this.connect();
+    const p = await this.handle.requestPermission({ mode: 'readwrite' });
+    this.status = p === 'granted' ? 'ready' : 'need-permission';
+    if (this.status === 'ready') await this.sync();
+  },
+  async disconnect() { this.handle = null; this.status = 'none'; await DB.del('kv', 'dir'); },
+  fileName(ep) { return `${slug(ep.title)}.${ep.id}.kikitori.json`; },
+  idOf(name) { const m = name.match(/\.((?:yt|au)_[A-Za-z0-9_-]+)\.kikitori\.json$/); return m ? m[1] : null; },
+  async writeText(name, text, dir = this.handle) { const fh = await dir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(text); await w.close(); },
+  async readTomb() { try { const f = await (await this.handle.getFileHandle('_deleted.kikitori-meta.json')).getFile(); return JSON.parse(await f.text()); } catch { return {}; } },
+  queue(ep) {
+    if (this.status !== 'ready') return;
+    clearTimeout(this.timers.get(ep.id));
+    this.timers.set(ep.id, setTimeout(() => this.write(ep).catch(e => this.fail(e)), 2500));
+  },
+  fail(e) {
+    console.warn('Folder write failed', e);
+    if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError') { this.status = 'need-permission'; renderFolderState(); toast('Lost access to the library folder. Reconnect it in Library.', { err: true, action: openLibrary, label: 'Library' }); }
+  },
+  async write(ep) {
+    if (this.status !== 'ready') return;
+    const name = this.fileName(ep), prev = this.names.get(ep.id);
+    const clean = JSON.parse(JSON.stringify(ep)); clean.chunks?.forEach(c => { if (c.status === 'working') c.status = c.sentences?.length ? 'partial' : 'none'; });
+    await this.writeText(name, JSON.stringify(clean));
+    if (prev && prev !== name) await this.handle.removeEntry(prev).catch(() => {});
+    this.names.set(ep.id, name);
+  },
+  async remove(id) {
+    if (this.status !== 'ready') return;
+    try {
+      const tomb = await this.readTomb(); tomb[id] = Date.now();
+      await this.writeText('_deleted.kikitori-meta.json', JSON.stringify(tomb));
+      for await (const [name] of this.handle.entries()) if (this.idOf(name) === id) await this.handle.removeEntry(name).catch(() => {});
+      const ad = await this.handle.getDirectoryHandle('audio').catch(() => null);
+      if (ad) for await (const [name] of ad.entries()) if (name.startsWith(id + '.')) await ad.removeEntry(name).catch(() => {});
+    } catch (e) { this.fail(e); }
+  },
+  async writeAudio(ep, blob) {
+    if (this.status !== 'ready') return;
+    const ad = await this.handle.getDirectoryHandle('audio', { create: true });
+    const ext = (ep.audio?.name || '').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '') || 'audio';
+    const name = `${ep.id}.${ext}`;
+    try { const f = await (await ad.getFileHandle(name)).getFile(); if (f.size === blob.size) return; } catch {}
+    const fh = await ad.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(blob); await w.close();
+  },
+  async readAudio(ep) {
+    if (this.status !== 'ready') return null;
+    try { const ad = await this.handle.getDirectoryHandle('audio'); for await (const [name, h] of ad.entries()) if (name.startsWith(ep.id + '.') && h.kind === 'file') return await h.getFile(); } catch {}
+    return null;
+  },
+  async sync() {
+    if (this.status !== 'ready' || this.syncing) return;
+    this.syncing = true;
+    try {
+      const tomb = await this.readTomb();
+      const remote = new Map();
+      for await (const [name, h] of this.handle.entries()) {
+        if (h.kind !== 'file') continue; const id = this.idOf(name); if (!id) continue;
+        try { const f = await h.getFile(); const ep = JSON.parse(await f.text()); if (ep?.id === id) { remote.set(id, ep); this.names.set(id, name); } } catch (e) { console.warn('Skipping unreadable', name, e); }
+      }
+      const locals = await DB.all('episodes'); const localMap = new Map(locals.map(e => [e.id, e]));
+      let changed = false;
+      for (const [id, at] of Object.entries(tomb)) {
+        const l = localMap.get(id);
+        if (l && (l.updatedAt || 0) <= at) { Cache.delete(id); await DB.del('episodes', id); await DB.del('blobs', id).catch(() => {}); localMap.delete(id); changed = true; if (App.ep?.id === id) closeEpisode(); }
+      }
+      for (const [id, r] of remote) {
+        if (tomb[id] && (r.updatedAt || 0) <= tomb[id]) { const nm = this.names.get(id); if (nm) await this.handle.removeEntry(nm).catch(() => {}); this.names.delete(id); continue; }
+        const l = Cache.get(id) || localMap.get(id);
+        if (!l || (r.updatedAt || 0) > (l.updatedAt || 0) || (r.posAt || 0) > (l.posAt || 0)) {
+          const busy = [...App.jobs.keys()].some(k => k.startsWith(id + ':'));
+          const m = mergeEpisodes(l, r);
+          if (busy && l) { Object.assign(l, { title: m.title, pos: m.pos, posAt: m.posAt }); continue; }
+          if (l && Cache.get(id) === l) { Object.keys(l).forEach(k => delete l[k]); Object.assign(l, m); } else Cache.set(id, m);
+          await DB.put('episodes', JSON.parse(JSON.stringify(m))); changed = true;
+          if (App.ep?.id === id) { App.ep = Cache.get(id); renderAll(); }
+        }
+      }
+      for (const l of localMap.values()) {
+        const r = remote.get(l.id);
+        if (!r || (l.updatedAt || 0) > (r.updatedAt || 0) || (l.posAt || 0) > (r.posAt || 0)) await this.write(Cache.get(l.id) || l);
+      }
+      this.lastSync = Date.now();
+      if (changed) { renderRecent(); if ($('#libraryDlg').open) renderLibrary(); }
+    } catch (e) { this.fail(e); throw e; }
+    finally { this.syncing = false; renderFolderState(); }
+  },
+};
+
+/* ---------- export / import ---------- */
+function stripForExport(ep) { const c = JSON.parse(JSON.stringify(ep)); c.chunks?.forEach(ch => { if (ch.status === 'working') ch.status = ch.sentences?.length ? 'partial' : 'none'; }); return c; }
+async function deliverFile(name, text) {
+  const file = new File([text], name, { type: 'application/json' });
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (touch && navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  const a = el('a', { href: URL.createObjectURL(file), download: name }); document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+async function exportEpisode(ep) { await deliverFile(`${slug(ep.title)}.kikitori.json`, JSON.stringify(stripForExport(ep), null, 1)); }
+async function exportAll() {
+  const eps = await DB.all('episodes');
+  await deliverFile(`kikitori-library-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ kikitori: 1, exportedAt: new Date().toISOString(), episodes: eps.map(e => stripForExport(Cache.get(e.id) || e)) }));
+}
+async function importFiles(files) {
+  let n = 0;
+  for (const f of files) {
+    try {
+      const j = JSON.parse(await f.text());
+      const list = Array.isArray(j.episodes) ? j.episodes : (j.id && j.kind ? [j] : []);
+      for (const r of list) {
+        if (!/^(yt|au)_[A-Za-z0-9_-]+$/.test(r.id || '') || !Array.isArray(r.chunks)) continue;
+        const l = await getEpisode(r.id); const m = mergeEpisodes(l, r);
+        if (l) { Object.keys(l).forEach(k => delete l[k]); Object.assign(l, m); await saveEpisode(l, { bump: false }); } else await saveEpisode(m, { bump: false });
+        n++;
+      }
+    } catch (e) { showError(new UserError(`${f.name} isn't a Kikitori file.`)); }
+  }
+  if (n) { toast(`Imported ${n} episode${n === 1 ? '' : 's'}.`); renderRecent(); if ($('#libraryDlg').open) renderLibrary(); if (App.ep) renderAll(); }
+}
+
+/* ---------- players ---------- */
+let ytApiPromise = null;
+function loadYTApi() {
+  if (window.YT?.Player) return Promise.resolve();
+  return ytApiPromise ||= new Promise((res, rej) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { prev?.(); res(); };
+    const s = el('script', { src: 'https://www.youtube.com/iframe_api' }); s.onerror = () => { ytApiPromise = null; rej(new Error('Couldn\'t load the YouTube player. Check your connection or content blockers.')); };
+    document.head.append(s);
+    setTimeout(() => { if (!window.YT?.Player) { ytApiPromise = null; rej(new Error('The YouTube player took too long to load.')); } }, 20000);
+  });
+}
+class AudioPlayer {
+  constructor(blob) { this.el = $('#audioEl'); this.url = URL.createObjectURL(blob); this.el.src = this.url; this.el.preservesPitch = true; this.kind = 'audio'; }
+  ready() { return new Promise(res => { if (this.el.readyState >= 1) return res(); this.el.addEventListener('loadedmetadata', () => res(), { once: true }); setTimeout(res, 8000); }); }
+  time() { return this.el.currentTime || 0; }
+  duration() { return isFinite(this.el.duration) ? this.el.duration : 0; }
+  playing() { return !this.el.paused && !this.el.ended; }
+  play() { return this.el.play().catch(e => { if (e.name !== 'AbortError') showError(e); }); }
+  pause() { this.el.pause(); }
+  seek(t) { this.el.currentTime = Math.max(0, t); }
+  setRate(r) { this.el.playbackRate = r; this.el.preservesPitch = true; return r; }
+  destroy() { this.el.pause(); this.el.removeAttribute('src'); this.el.load(); URL.revokeObjectURL(this.url); }
+}
+class YTPlayer {
+  constructor(videoId, start) {
+    this.kind = 'yt'; this.videoId = videoId; this.p = null; this.state = -1;
+    const vb = $('#vbox'); vb.innerHTML = ''; vb.append(el('div', { id: 'ytMount' }));
+    this._ready = loadYTApi().then(() => new Promise(res => {
+      this.p = new YT.Player('ytMount', {
+        videoId, width: '100%', height: '100%',
+        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, start: Math.floor(start || 0), origin: location.origin, enablejsapi: 1 },
+        events: {
+          onReady: () => res(),
+          onStateChange: e => { this.state = e.data; updatePlayIcon(); },
+          onError: e => { const msg = { 152: 'YouTube refused to play the video here. Open the app from its web address instead of as a file.', 153: 'YouTube won\'t play videos when the app is opened as a file on your computer. Open it from GitHub Pages or a local server (http://localhost) instead. Audio files still work here.', 2: 'That video ID looks wrong.', 5: 'The video can\'t play in this browser.', 100: 'Video not found or private.', 101: 'The owner doesn\'t allow this video to play outside YouTube. Transcripts still work, but you\'ll need to watch on YouTube.', 150: 'The owner doesn\'t allow this video to play outside YouTube. Transcripts still work, but you\'ll need to watch on YouTube.' }[e.data] || 'YouTube player error ' + e.data; toast(msg, { err: true }); },
+        },
+      });
+    }));
+  }
+  ready() { return this._ready; }
+  time() { try { return this.p?.getCurrentTime?.() || 0; } catch { return 0; } }
+  duration() { try { return this.p?.getDuration?.() || 0; } catch { return 0; } }
+  title() { try { return this.p?.getVideoData?.().title || ''; } catch { return ''; } }
+  playing() { return this.state === 1 || this.state === 3; }
+  play() { this.p?.playVideo?.(); }
+  pause() { this.p?.pauseVideo?.(); }
+  seek(t) { this.p?.seekTo?.(Math.max(0, t), true); }
+  setRate(r) {
+    try {
+      const rates = this.p?.getAvailablePlaybackRates?.() || [];
+      const pick = rates.length ? rates.reduce((a, b) => Math.abs(b - r) < Math.abs(a - r) ? b : a) : r;
+      this.p?.setPlaybackRate?.(pick); return pick;
+    } catch { return r; }
+  }
+  destroy() { try { this.p?.destroy?.(); } catch {} }
+}
+
+/* ---------- app state ---------- */
+const App = {
+  ep: null, player: null, active: -1, chunkIdx: -1, loopOn: false, loopTarget: null,
+  pauseAfter: !!S.pauseAfter, pausedFor: -1, playUntil: null, playUntilCb: null, lastSeek: 0,
+  jobs: new Map(), progress: new Map(), starOnly: false, userScroll: 0, posSaved: 0, lastPosWrite: 0,
+};
+const curChunk = () => App.ep?.chunks?.[App.chunkIdx] || null;
+const curSentences = () => curChunk()?.sentences || [];
+const curSentence = () => curSentences()[App.active] || null;
+function chunkAt(t) {
+  const cs = App.ep?.chunks || []; if (!cs.length) return -1;
+  for (let i = 0; i < cs.length; i++) if (t < cs[i].end) return i;
+  return cs.length - 1;
+}
+function sentenceAt(sents, t) {
+  let a = 0, b = sents.length - 1, k = -1;
+  while (a <= b) { const m = (a + b) >> 1; if (sents[m].s <= t + 0.05) { k = m; a = m + 1; } else b = m - 1; }
+  return k;
+}
+
+/* ---------- processing ---------- */
+function estimateCost(ep, ch) {
+  const min = (ch.end - ch.start) / 60; let usd = 0, known = true;
+  const path = transcriptPath(ep);
+  if (path === 'stt') { const p = PRICE.stt[S.sttModel]; if (p != null) usd += p * min / 60; else known = false; }
+  if (path === 'gemini') { const m = S.ytGeminiModel; const a = PRICE.geminiAudio[m], o = PRICE.llm[m]; if (a && o) usd += min * 60 * 32 / 1e6 * a + min * 500 / 1e6 * o[1]; else known = false; }
+  const lp = PRICE.llm[S.llmModel] || PRICE.llm[String(S.llmModel).replace(/^(google|openai)\//, '')];
+  if (lp) usd += min * 700 / 1e6 * lp[0] + min * 1400 / 1e6 * lp[1]; else known = false;
+  return known ? usd : null;
+}
+function transcriptPath(ep) {
+  if (ep.source?.captions?.cues?.length) return 'captions';
+  if (ep.kind === 'audio' || ep.hasAudio) return 'stt';
+  if (S.ytSource === 'gemini') return 'gemini';
+  if (S.ytSource === 'supadata') return 'captions';
+  return hasKey('supadata') ? 'captions' : 'gemini';
+}
+function setProgress(key, msg, frac) { App.progress.set(key, { msg, frac }); if (App.ep && key === `${App.ep.id}:${App.chunkIdx}`) renderChunkState(); }
+async function getAudioBlob(ep) {
+  let b = await DB.get('blobs', ep.id).catch(() => null);
+  if (!b && Folder.status === 'ready') { b = await Folder.readAudio(ep); if (b) await DB.put('blobs', b, ep.id).catch(() => {}); }
+  return b || null;
+}
+async function cuesFor(ep, ch, prog) {
+  const inChunk = cues => cues.filter(c => { const mid = (c.s + c.e) / 2; return mid >= ch.start && (mid < ch.end || ch.i === ep.chunks.length - 1); });
+  if (ep.source?.captions?.cues?.length) return inChunk(ep.source.captions.cues);
+  const blob = (ep.kind === 'audio' || ep.hasAudio) ? await getAudioBlob(ep) : null;
+  if (ep.kind === 'audio' && !blob) throw new UserError('The audio file for this episode isn\'t on this device. Use "Locate audio file" above the transcript.');
+  if (blob) return await sttChunk(ep, ch, blob, prog);
+  // YouTube
+  const tryCaptions = S.ytSource === 'supadata' || (S.ytSource === 'auto' && hasKey('supadata'));
+  if (tryCaptions) {
+    try {
+      prog('Fetching YouTube captions…');
+      const cues = await supadataCaptions(ep.ytId);
+      ep.source = { ...(ep.source || {}), captions: { provider: 'supadata', at: Date.now(), cues } };
+      if (!ep.duration && cues.length) { ep.duration = cues[cues.length - 1].e; buildChunks(ep); }
+      await saveEpisode(ep);
+      return inChunk(cues);
+    } catch (e) {
+      if (S.ytSource === 'supadata' || !hasKey('gemini')) throw e;
+      toast(`${e.message} Using Gemini to transcribe this part instead.`);
+    }
+  }
+  if (!hasKey('gemini')) throw new UserError('To transcribe YouTube videos, add a Supadata key (uses existing captions) or a Gemini key in Settings. You can also import a subtitle file from the More menu.', 'settings');
+  return await geminiYouTube(ep, ch.start, ch.end, prog);
+}
+async function sttChunk(ep, ch, blob, prog) {
+  prog('Preparing audio…');
+  const pieces = await planPieces(ep, blob, ch.start, ch.end, prog);
+  const cues = []; const base = `${slug(ep.title).slice(0, 40)}。句読点を付けて書き起こします。`;
+  let tail = '';
+  for (let j = 0; j < pieces.length; j++) {
+    const p = pieces[j], tag = pieces.length > 1 ? ` ${j + 1}/${pieces.length}` : '';
+    const made = await p.make(f => prog(`Preparing audio${tag} (${Math.round(f * 100)}%)…`, 0.05 + 0.25 * (j + f) / pieces.length));
+    window.__kikitoriDebug?.pieces?.push({ s: p.s, e: p.e, size: made.blob.size, name: made.name, blob: made.blob });
+    prog(`Transcribing${tag}…`, 0.05 + 0.3 * (j + 0.5) / pieces.length);
+    const r = await sttTranscribe(made.blob, made.name, base + tail);
+    for (const sg of r.segments) {
+      const c = { s: sg.s + p.s, e: sg.e + p.s, t: sg.t };
+      const w = r.words.filter(x => x.s >= sg.s - 0.05 && x.s < sg.e + 0.05).map(x => ({ t: x.t, s: x.s + p.s, e: x.e + p.s }));
+      if (w.length) c.w = w;
+      cues.push(c);
+    }
+    tail = cues.slice(-3).map(c => c.t).join('').slice(-90);
+  }
+  return tidyCuesKeepWords(cues);
+}
+function tidyCuesKeepWords(cues) {
+  cues.sort((a, b) => a.s - b.s);
+  for (let i = 0; i < cues.length; i++) { const n = cues[i + 1]; if (!(cues[i].e > cues[i].s)) cues[i].e = n ? n.s : cues[i].s + 2; }
+  return cues.filter(c => c.t);
+}
+function makeBatches(cues, from, maxCues = 40, maxChars = 1000) {
+  const out = []; let i = from;
+  while (i < cues.length) {
+    let j = i, chars = 0;
+    while (j < cues.length && j - i < maxCues && chars < maxChars) { chars += cues[j].t.length; j++; }
+    if (j < cues.length) {
+      for (let k = j - 1; k > i + Math.floor((j - i) * 0.55); k--) {
+        if (/[。？！?!」』]$/.test(cues[k].t.trim()) || cues[k + 1].s - cues[k].e > 0.9) { j = k + 1; break; }
+      }
+    }
+    out.push([i, j]); i = j;
+  }
+  return out;
+}
+function timeSentences(cues, raw) {
+  const n = cues.length;
+  const stream = [], cueStart = [], cueEnd = [];
+  for (const c of cues) {
+    cueStart.push(stream.length);
+    const chars = [...normJa(c.t)];
+    let times = null;
+    if (c.w?.length) { const wt = []; for (const w of c.w) { const wc = [...normJa(w.t)]; for (let k = 0; k < wc.length; k++) wt.push(w.s + (w.e - w.s) * k / wc.length); } if (wt.length) times = wt; }
+    for (let k = 0; k < chars.length; k++) stream.push(times ? times[Math.min(times.length - 1, Math.floor(k * times.length / chars.length))] : c.s + (c.e - c.s) * k / Math.max(1, chars.length));
+    if (!chars.length) stream.push(c.s);
+    cueEnd.push(stream.length);
+  }
+  const lens = raw.map(r => Math.max(1, [...normJa(plainOf(r.f))].length));
+  const totalLen = lens.reduce((a, b) => a + b, 0) || 1, scale = stream.length / totalLen;
+  const cueOfChar = idx => { let a = 0, b = n - 1; while (a < b) { const m = (a + b + 1) >> 1; if (cueStart[m] <= idx) a = m; else b = m - 1; } return a; };
+  let cum = 0;
+  const out = raw.map((r, k) => {
+    const sIdx = clamp(Math.round(cum * scale), 0, stream.length - 1); cum += lens[k];
+    const eIdx = clamp(Math.round(cum * scale) - 1, 0, stream.length - 1);
+    let a = Array.isArray(r.c) ? +r.c[0] : NaN, b = Array.isArray(r.c) ? +(r.c[r.c.length - 1]) : NaN;
+    if (!Number.isInteger(a) || a < 0 || a >= n) a = cueOfChar(sIdx);
+    if (!Number.isInteger(b) || b < a || b >= n) b = Math.max(a, cueOfChar(eIdx));
+    return { a, b, sIdx, eIdx, r };
+  });
+  for (let k = 0; k < out.length; k++) {
+    const o = out[k], prev = out[k - 1], next = out[k + 1];
+    const sharedStart = prev && prev.b >= o.a, sharedEnd = next && next.a <= o.b;
+    o.s = sharedStart ? stream[clamp(o.sIdx, cueStart[o.a], Math.max(cueStart[o.a], cueEnd[o.a] - 1))] : cues[o.a].s;
+    o.e = sharedEnd ? null : cues[o.b].e;
+  }
+  for (let k = 0; k < out.length; k++) {
+    const o = out[k];
+    if (o.e == null) o.e = out[k + 1]?.s ?? cues[o.b].e;
+    if (k > 0 && o.s < out[k - 1].s) o.s = out[k - 1].s + 0.05;
+    if (o.e < o.s + 0.3) o.e = o.s + 0.3;
+  }
+  return out.map(o => ({ s: +o.s.toFixed(2), e: +o.e.toFixed(2), f: String(o.r.f || '').trim(), en: String(o.r.e || '').trim(), v: Array.isArray(o.r.v) ? o.r.v.filter(x => x && x.w).slice(0, 4).map(x => ({ w: String(x.w), r: String(x.r || ''), m: String(x.m || '') })) : [] }));
+}
+async function annotateBatch(ep, cues, prevText) {
+  const user = `Episode: ${ep.title || 'untitled'}\n${prevText ? `Previous sentence (context only): ${prevText}\n` : ''}Cues:\n${cues.map((c, i) => `${i}| ${c.t}`).join('\n')}`;
+  const { json } = await llmJSON({ system: ANNOT_SYSTEM(S.level || 'N2 → N1'), user, schema: ANNOT_SCHEMA, maxTokens: 16000 });
+  const raw = Array.isArray(json.s) ? json.s : Array.isArray(json.sentences) ? json.sentences : [];
+  if (!raw.length) throw new Error('The model returned no sentences');
+  return timeSentences(cues, raw);
+}
+async function annotateRange(ep, cues, prevText, depth = 0) {
+  try { return await annotateBatch(ep, cues, prevText); }
+  catch (e) {
+    if ((e.truncated || /JSON/.test(e.message)) && cues.length > 4 && depth < 3) {
+      const mid = Math.ceil(cues.length / 2);
+      const a = await annotateRange(ep, cues.slice(0, mid), prevText, depth + 1);
+      const b = await annotateRange(ep, cues.slice(mid), plainOf(a[a.length - 1]?.f), depth + 1);
+      return a.concat(b);
+    }
+    throw e;
+  }
+}
+function rawSentences(cues) { return cues.map(c => ({ s: c.s, e: c.e, f: c.t, en: '', v: [], raw: true })); }
+async function processChunk(ep, i, { redoCues = false, redoAnnot = false } = {}) {
+  const key = `${ep.id}:${i}`; if (App.jobs.has(key)) return;
+  const ch = ep.chunks[i]; if (!ch) return;
+  if (Keys.locked) { try { await promptUnlock('Unlock your API keys to transcribe this part.'); } catch { return; } }
+  App.jobs.set(key, true);
+  const prog = (msg, frac) => setProgress(key, msg, frac);
+  ch.status = 'working'; ch.err = null; renderRail(); renderChunkState();
+  try {
+    if (redoCues) { delete ch.cues; ch.sentences = []; ch.next = 0; }
+    if (redoAnnot) { ch.sentences = []; ch.next = 0; }
+    if (!ch.cues?.length) {
+      prog('Starting…', 0.02);
+      ch.cues = await cuesFor(ep, ch, prog);
+      ch.sentences = []; ch.next = 0;
+      await saveEpisode(ep);
+    }
+    if (!ch.cues.length) { ch.status = 'ready'; ch.sentences = []; ch.meta = { at: Date.now(), empty: true }; await saveEpisode(ep); return; }
+    const batches = makeBatches(ch.cues, ch.next || 0);
+    const results = new Array(batches.length); let commit = 0, nextJob = 0, failed = 0, stop = false;
+    const doneCues = () => (ch.next || 0);
+    const commitReady = async () => {
+      let did = false;
+      while (commit < batches.length && results[commit]) {
+        const r = results[commit];
+        ch.sentences.push(...r); ch.next = batches[commit][1]; commit++; did = true;
+      }
+      if (did) {
+        prog(`Translating… ${doneCues()} of ${ch.cues.length} lines`, 0.35 + 0.65 * doneCues() / ch.cues.length);
+        if (App.ep === ep && App.chunkIdx === i) renderLines(true);
+        await saveEpisode(ep, { folder: false });
+      }
+    };
+    prog(`Translating… 0 of ${ch.cues.length} lines`, 0.35);
+    const worker = async () => {
+      while (!stop && nextJob < batches.length) {
+        const bi = nextJob++; const [a, b] = batches[bi];
+        const slice = ch.cues.slice(a, b);
+        const prevText = a > 0 ? ch.cues[a - 1]?.t : '';
+        try { results[bi] = await annotateRange(ep, slice, prevText); }
+        catch (e) {
+          if (e instanceof UserError || e.status === 401 || e.status === 403 || e.status === 404) { stop = true; throw e; }
+          console.warn('Batch failed', e); failed++; results[bi] = rawSentences(slice); ch.lastErr = e.message;
+        }
+        if (!stop) await commitReady();
+      }
+    };
+    await Promise.all(Array.from({ length: clamp(+S.llmConc || 2, 1, 6) }, worker));
+    await commitReady();
+    ch.sentences.forEach((s, k) => { s.id = `${i}.${k}`; });
+    ch.status = failed ? 'partial' : 'ready';
+    ch.err = failed ? `Translation failed for some lines: ${ch.lastErr || ''}` : null;
+    ch.meta = { at: Date.now(), src: transcriptPath(ep), stt: transcriptPath(ep) === 'stt' ? S.sttModel : undefined, llm: S.llmModel };
+    ch.cues = ch.cues.map(c => ({ s: c.s, e: c.e, t: c.t }));
+    await saveEpisode(ep);
+    if (failed) toast(ch.err, { err: true });
+  } catch (e) {
+    ch.status = ch.sentences?.length ? 'partial' : 'error'; ch.err = e.message;
+    await saveEpisode(ep).catch(() => {});
+    showError(e);
+  } finally {
+    App.jobs.delete(key); App.progress.delete(key);
+    if (App.ep === ep) { renderRail(); renderChunkState(); if (App.chunkIdx === i) renderLines(); }
+  }
+}
+
+async function retryRaw(ep, i) {
+  const key = `${ep.id}:${i}`, ch = ep.chunks[i]; if (!ch || App.jobs.has(key)) return;
+  if (Keys.locked) { try { await promptUnlock(); } catch { return; } }
+  App.jobs.set(key, true); ch.status = 'working'; renderRail(); renderChunkState();
+  let failed = 0, done = 0;
+  try {
+    const groups = []; const S0 = ch.sentences || [];
+    for (let a = 0; a < S0.length;) { if (!S0[a].raw) { a++; continue; } let b = a; while (b < S0.length && S0[b].raw) b++; groups.push([a, b]); a = b; }
+    const total = groups.reduce((n, g) => n + g[1] - g[0], 0); let shift = 0;
+    for (const [a0, b0] of groups) {
+      const a = a0 + shift, b = b0 + shift;
+      const cues = ch.sentences.slice(a, b).map(s => ({ s: s.s, e: s.e, t: s.f }));
+      const res = [];
+      for (const [x, y] of makeBatches(cues, 0)) {
+        try { res.push(...await annotateRange(ep, cues.slice(x, y), plainOf(ch.sentences[a - 1]?.f))); }
+        catch (e) { if (e instanceof UserError || e.status === 401 || e.status === 403) throw e; failed++; ch.lastErr = e.message; res.push(...rawSentences(cues.slice(x, y))); }
+        done += y - x; setProgress(key, `Translating… ${done} of ${total} lines`, done / total);
+      }
+      ch.sentences.splice(a, b - a, ...res); shift += res.length - (b - a);
+    }
+    ch.sentences.forEach((s, k) => { s.id = `${i}.${k}`; });
+    ch.status = failed ? 'partial' : 'ready'; ch.err = failed ? `Translation failed for some lines: ${ch.lastErr || ''}` : null;
+    await saveEpisode(ep);
+  } catch (e) { ch.status = 'partial'; ch.err = e.message; showError(e); await saveEpisode(ep).catch(() => {}); }
+  finally { App.jobs.delete(key); App.progress.delete(key); if (App.ep === ep) { renderRail(); renderChunkState(); if (App.chunkIdx === i) renderLines(); } }
+}
+
+/* ---------- grammar ---------- */
+async function explainGrammar(sent, idx) {
+  const sents = curSentences();
+  const { json } = await llmJSON({
+    system: GRAMMAR_SYSTEM(S.level || 'N2 → N1'),
+    user: `Sentence: ${plainOf(sent.f)}\nTranslation: ${sent.en || '(none)'}\nContext before: ${plainOf(sents[idx - 1]?.f) || '(none)'}\nContext after: ${plainOf(sents[idx + 1]?.f) || '(none)'}`,
+    schema: GRAMMAR_SCHEMA, maxTokens: 4000,
+  });
+  return { gist: String(json.gist || ''), parts: Array.isArray(json.parts) ? json.parts : [], points: Array.isArray(json.points) ? json.points : [], nuance: String(json.nuance || '') };
+}
+
+/* ---------- rendering ---------- */
+const ICON_PLAY = '<path d="M7 4v16l13-8z"/>', ICON_PAUSE = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+function updatePlayIcon() { const p = App.player?.playing(); $('#playIcon').innerHTML = p ? ICON_PAUSE : ICON_PLAY; $('#playBtn').setAttribute('aria-label', p ? 'Pause' : 'Play'); }
+function renderKeysNote() {
+  const box = $('#keysNote');
+  if (Keys.locked) { box.innerHTML = ''; box.append('Your API keys are locked. ', el('button', { class: 'btn small', type: 'button', onclick: () => promptUnlock().catch(() => {}) }, 'Unlock')); return; }
+  const g = hasKey('groq') || (S.sttProvider !== 'groq' && hasKey(PROVIDERS.stt[S.sttProvider]?.key)), l = hasKey(llmCfg().keyName), sp = hasKey('supadata');
+  if (g && l) { box.hidden = true; return; }
+  box.hidden = false; box.innerHTML = '';
+  box.append(el('strong', {}, 'Before your first episode, add API keys in '), el('button', { class: 'btn small', type: 'button', onclick: openSettings }, 'Settings'),
+    el('ul', {},
+      el('li', {}, g ? '✓ Speech-to-text key added' : 'Groq: transcribes audio files (free tier; about $0.04 per hour after that).'),
+      el('li', {}, l ? '✓ Translation key added' : 'Google Gemini: furigana, translations, vocabulary and grammar (free tier available).'),
+      el('li', {}, sp ? '✓ Supadata key added' : 'Supadata (optional): pulls existing YouTube captions, 100 videos a month free.')));
+}
+function epMeta(ep) {
+  const done = (ep.chunks || []).filter(c => c.status === 'ready').length, total = (ep.chunks || []).length;
+  return [ep.duration ? fmt(ep.duration) : '', total ? `${done} of ${total} part${total === 1 ? '' : 's'} transcribed` : '', new Date(ep.updatedAt || ep.createdAt).toLocaleDateString()].filter(Boolean).join(' · ');
+}
+async function renderRecent() {
+  const eps = (await DB.all('episodes').catch(() => [])).map(e => Cache.get(e.id) || e).sort((a, b) => (b.posAt || b.updatedAt) - (a.posAt || a.updatedAt)).slice(0, 8);
+  $('#recentWrap').hidden = !eps.length;
+  const ul = $('#recentList'); ul.innerHTML = '';
+  for (const ep of eps) ul.append(el('li', {}, el('span', { class: 'kind' }, ep.kind === 'youtube' ? 'YouTube' : 'Audio'),
+    el('button', { class: 'ep-open', type: 'button', onclick: () => openEpisodeById(ep.id) }, el('span', { class: 'ep-title' }, ep.title || ep.id), el('span', { class: 'ep-meta' }, epMeta(ep)))));
+}
+function renderAll() {
+  if (!App.ep) return;
+  const ep = App.ep;
+  $('#epTitle').textContent = ep.title || 'Untitled';
+  $('#epKind').textContent = ep.kind === 'youtube' ? 'YouTube' : 'Audio';
+  $('#audioTitle').textContent = ep.title || '';
+  $('#attachLabel').hidden = ep.kind !== 'youtube';
+  $('#syncVal').textContent = `${(ep.sync || 0) >= 0 ? '+' : ''}${(ep.sync || 0).toFixed(1)}s`;
+  $('[data-act="copyLink"]').hidden = ep.kind !== 'youtube';
+  renderRail(); renderChunkState(); renderLines(); renderScrubTrack();
+}
+function renderRail() {
+  const ep = App.ep; if (!ep) return;
+  const box = $('#chunks'); box.innerHTML = '';
+  if (!ep.chunks.length) { box.append(el('span', { class: 'fineprint' }, 'Parts appear once the length is known. Press play.')); return; }
+  ep.chunks.forEach((c, i) => {
+    const working = App.jobs.has(`${ep.id}:${i}`);
+    const st = working ? 'working' : c.status;
+    box.append(el('button', { type: 'button', class: `chunk ${st}`, 'aria-current': i === App.chunkIdx ? 'true' : 'false', title: { ready: 'Transcribed', working: 'Working…', partial: 'Partly done', error: 'Failed', none: 'Not transcribed yet' }[st] || '',
+      onclick: () => { seekTo(c.start + 0.01); setChunk(i); } }, el('span', { class: 'dot', 'aria-hidden': 'true' }), `${fmt(c.start)}–${fmt(c.end)}`));
+  });
+  box.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  renderScrubTrack();
+}
+function renderScrubTrack() {
+  const ep = App.ep, tr = $('#scrubTrack'); tr.innerHTML = ''; if (!ep?.duration) return;
+  for (const c of ep.chunks) {
+    const st = App.jobs.has(`${ep.id}:${c.i}`) ? 'working' : c.status;
+    tr.append(el('i', { class: `seg ${st === 'ready' ? 'ready' : st === 'working' ? 'working' : ''}`, style: `left:${c.start / ep.duration * 100}%;width:${(c.end - c.start) / ep.duration * 100}%` }));
+    if (c.i > 0) tr.append(el('i', { class: 'tick', style: `left:${c.start / ep.duration * 100}%` }));
+  }
+}
+function renderChunkState() {
+  const box = $('#chunkState'); box.innerHTML = '';
+  const ep = App.ep, ch = curChunk(); if (!ep) return;
+  if (ep.kind === 'audio' && !App.player) {
+    box.append(el('div', { class: 'state' }, el('h3', {}, 'Audio file not on this device'),
+      el('p', {}, `Pick "${ep.audio?.name || 'the original file'}" to play it here. The transcript below still works.`),
+      el('div', { class: 'row' }, el('label', { class: 'btn primary', for: 'relinkInput' }, 'Locate audio file'))));
+  }
+  if (!ch) return;
+  const key = `${ep.id}:${ch.i}`;
+  if (App.jobs.has(key)) {
+    const p = App.progress.get(key) || { msg: 'Working…', frac: 0 };
+    box.append(el('div', { class: 'state' }, el('h3', {}, `Preparing ${fmt(ch.start)}–${fmt(ch.end)}`), el('div', { class: 'progress' }, el('i', { style: `width:${Math.round((p.frac || 0) * 100)}%` })), el('p', { class: 'fineprint', style: 'margin:0' }, p.msg)));
+    return;
+  }
+  if (ch.status === 'none' || ch.status === 'error') {
+    const cost = estimateCost(ep, ch), path = transcriptPath(ep);
+    const how = { stt: `Speech-to-text with ${S.sttModel}`, captions: ep.source?.captions?.cues?.length ? 'Uses the captions already saved' : 'Uses the video\'s YouTube captions (Supadata)', gemini: `Gemini (${S.ytGeminiModel}) listens to the video` }[path];
+    box.append(el('div', { class: 'state' },
+      el('h3', {}, ch.status === 'error' ? 'This part didn\'t finish' : `${fmt(ch.start)}–${fmt(ch.end)} has no transcript yet`),
+      ch.status === 'error' ? el('p', { class: 'status-bad' }, ch.err || 'Unknown error') : el('p', {}, `${how}, then ${S.llmModel} adds furigana, translations and vocabulary.${cost != null ? ` Roughly $${cost < 0.01 ? cost.toFixed(3) : cost.toFixed(2)} for this part.` : ''}${S.autoProcess ? ' Starts automatically when you play this part.' : ''}`),
+      el('div', { class: 'row' }, el('button', { class: 'btn primary', type: 'button', onclick: () => processChunk(ep, ch.i) }, ch.status === 'error' ? 'Try again' : 'Transcribe this part'),
+        ep.kind === 'youtube' ? el('label', { class: 'btn', for: 'subsInput' }, 'Import subtitles') : null)));
+  } else if (ch.status === 'partial') {
+    const unfinished = (ch.next || 0) < (ch.cues?.length || 0);
+    box.append(el('div', { class: 'state' }, el('h3', {}, unfinished ? 'This part stopped partway' : 'Some lines are missing translations'), el('p', {}, ch.err || ''),
+      el('div', { class: 'row' }, el('button', { class: 'btn primary', type: 'button', onclick: () => unfinished ? processChunk(ep, ch.i) : retryRaw(ep, ch.i) }, unfinished ? 'Continue' : 'Retry missing lines'))));
+  }
+}
+function lineNode(s, k) {
+  const li = el('li', { class: 'line' + (s.raw ? ' raw' : '') + (k === App.active ? ' on' : ''), 'data-k': k });
+  li.append(el('button', { class: 't', type: 'button', 'data-act': 'seek', title: 'Play from here' }, fmt(s.s)));
+  const body = el('div', { class: 'body', 'data-act': 'seek' });
+  body.append(el('p', { class: 'jp ja', lang: 'ja', html: furiHtml(s.f) }));
+  if (s.en) body.append(el('p', { class: 'en', 'data-act': 'reveal' }, s.en));
+  li.append(body);
+  li.append(el('div', { class: 'acts' },
+    el('button', { class: 'btn', type: 'button', 'data-act': 'loop', title: 'Loop this sentence' }, 'Loop'),
+    el('button', { class: 'btn', type: 'button', 'data-act': 'grammar', title: 'Explain grammar (G)' }, 'Grammar'),
+    s.v?.length ? el('button', { class: 'btn', type: 'button', 'data-act': 'vocab', title: 'Key vocabulary' }, `Words ${s.v.length}`) : null,
+    el('button', { class: 'btn', type: 'button', 'data-act': 'shadow', title: 'Record yourself' }, 'Shadow'),
+    el('button', { class: 'btn star', type: 'button', 'data-act': 'star', 'aria-pressed': s.star ? 'true' : 'false', 'aria-label': 'Star' }, '★')));
+  return li;
+}
+function renderLines(append) {
+  const ol = $('#lines'), ch = curChunk();
+  const tag = ch && App.ep ? `${App.ep.id}:${ch.i}` : '';
+  const sents = ch?.sentences || [];
+  if (append && tag && !App.starOnly && ol.dataset.tag === tag) {
+    const have = ol.querySelectorAll('.line').length;
+    if (have > 0 && have <= sents.length) { const frag = document.createDocumentFragment(); for (let k = have; k < sents.length; k++) frag.append(lineNode(sents[k], k)); ol.append(frag); return; }
+  }
+  ol.innerHTML = ''; ol.dataset.tag = tag;
+  if (!ch) return;
+  if (!sents.length) { if (ch.status === 'ready') ol.append(el('li', { class: 'empty-note' }, 'No speech found in this part.')); return; }
+  const frag = document.createDocumentFragment();
+  sents.forEach((s, k) => { if (!App.starOnly || s.star) frag.append(lineNode(s, k)); });
+  ol.append(frag);
+  if (App.starOnly && !ol.children.length) ol.append(el('li', { class: 'empty-note' }, 'No starred sentences in this part yet.'));
+}
+function lineEl(k) { return $(`#lines .line[data-k="${k}"]`); }
+function setActive(k) {
+  lineEl(App.active)?.classList.remove('on');
+  App.active = k; App.pausedFor = -1;
+  const li = lineEl(k); li?.classList.add('on');
+  const s = curSentence();
+  const tj = $('#telopJa'), te = $('#telopEn'), tp = $('#telop');
+  if (s) { tp.classList.remove('empty'); tj.innerHTML = furiHtml(s.f); te.textContent = s.en || ''; }
+  else { tp.classList.add('empty'); tj.textContent = curChunk()?.sentences?.length ? '…' : (App.ep ? 'Press play' : ''); te.textContent = ''; }
+  if (li && S.follow && Date.now() - App.userScroll > 3500) followLine(li);
+  if ($('#shadowPanel').hidden === false && !Shadow.busy && !Shadow.blob) Shadow.setSentence(s);
+}
+function followLine(li) {
+  const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+  if (innerWidth <= 980) {
+    const top = $('.left').getBoundingClientRect().bottom + 12, r = li.getBoundingClientRect();
+    if (r.top < top || r.bottom > innerHeight - 40) scrollBy({ top: r.top - top, behavior });
+  } else li.scrollIntoView({ block: 'center', behavior });
+}
+function setChunk(i) {
+  if (i === App.chunkIdx) return;
+  App.chunkIdx = i; App.active = -1;
+  renderRail(); renderChunkState(); renderLines();
+}
+function applyViewModes() {
+  const b = document.body;
+  b.classList.toggle('furi-hide', S.furi === 'hide'); b.classList.toggle('furi-hover', S.furi === 'hover');
+  b.classList.toggle('trans-hide', S.trans === 'hide'); b.classList.toggle('trans-blur', S.trans === 'blur');
+  $('#furiBtn').textContent = { show: 'ふりがな', hover: 'ふりがな: hover', hide: 'ふりがな: off' }[S.furi];
+  $('#furiBtn').setAttribute('aria-pressed', S.furi === 'show' ? 'true' : 'false');
+  $('#transBtn').textContent = { show: 'English', blur: 'English: blurred', hide: 'English: off' }[S.trans];
+  $('#transBtn').setAttribute('aria-pressed', S.trans === 'show' ? 'true' : 'false');
+  $('#loopBtn').setAttribute('aria-pressed', App.loopOn ? 'true' : 'false');
+  $('#pauseAfterBtn').setAttribute('aria-pressed', App.pauseAfter ? 'true' : 'false');
+  $('#followBtn').setAttribute('aria-pressed', S.follow ? 'true' : 'false');
+  $('#starOnlyBtn').setAttribute('aria-pressed', App.starOnly ? 'true' : 'false');
+}
+const SPEEDS = [0.5, 0.6, 0.75, 0.85, 1, 1.1, 1.25];
+function renderSpeed() {
+  const box = $('#speedCtl'); box.innerHTML = '';
+  for (const r of SPEEDS) box.append(el('button', { type: 'button', 'aria-pressed': Math.abs(S.rate - r) < 0.001 ? 'true' : 'false', onclick: () => setRate(r) }, r === 1 ? '1×' : String(r)));
+  const sel = $('#speedSel'); sel.innerHTML = ''; for (const r of SPEEDS) sel.append(el('option', { value: r, selected: Math.abs(S.rate - r) < 0.001 }, r + '×'));
+}
+function setRate(r) {
+  const actual = App.player ? App.player.setRate(r) : r;
+  S.rate = actual; saveSettings(); renderSpeed();
+  if (Math.abs(actual - r) > 0.001) toast(`YouTube supports ${actual}× here, not ${r}×.`);
+}
+
+/* ---------- open / close episodes ---------- */
+function showStage(on) { $('#welcome').hidden = on; $('#stage').hidden = !on; }
+function closeEpisode() {
+  App.player?.destroy(); App.player = null; App.ep = null; App.chunkIdx = -1; App.active = -1;
+  history.replaceState(null, '', location.pathname);
+  showStage(false); renderRecent();
+}
+async function openEpisodeById(id, t) { const ep = await getEpisode(id); if (!ep) return toast('That episode isn\'t in your library.', { err: true }); openEpisode(ep, t); $('#libraryDlg').close?.(); }
+async function openEpisode(ep, t) {
+  App.player?.destroy(); App.player = null;
+  App.ep = ep; App.chunkIdx = -1; App.active = -1; App.loopTarget = null; App.starOnly = false;
+  showStage(true);
+  const stage = $('#stage'); stage.classList.toggle('is-yt', ep.kind === 'youtube'); stage.classList.toggle('is-audio', ep.kind === 'audio');
+  $('#vbox').hidden = ep.kind !== 'youtube'; $('#audioTitle').hidden = ep.kind !== 'audio';
+  $('#telopJa').textContent = 'Press play'; $('#telop').classList.add('empty'); $('#telopEn').textContent = '';
+  const start = t != null ? t : (ep.pos || 0);
+  const q = new URLSearchParams(); if (ep.kind === 'youtube') q.set('yt', ep.ytId); else q.set('ep', ep.id);
+  history.replaceState(null, '', `${location.pathname}?${q}`);
+  document.title = `${ep.title || 'Episode'} · 聞き取り`;
+  if (ep.duration) buildChunks(ep);
+  setChunk(Math.max(0, chunkAt(start)));
+  renderAll(); applyViewModes(); renderSpeed();
+  if (ep.kind === 'youtube') {
+    if (location.protocol === 'file:') toast('YouTube won\'t play when the app is opened as a file. Open it from GitHub Pages or http://localhost to watch; transcripts and audio files still work.', { err: true });
+    const pl = new YTPlayer(ep.ytId, start); App.player = pl;
+    pl.ready().then(async () => {
+      if (App.player !== pl) return;
+      pl.setRate(S.rate || 1);
+      if (start > 1) pl.seek(start);
+      for (let i = 0; i < 40 && !pl.duration(); i++) await sleep(250);
+      const d = pl.duration(), title = pl.title(); let dirty = false;
+      if (title && (!ep.title || ep.title.startsWith('YouTube '))) { ep.title = title; dirty = true; }
+      if (d && Math.abs(d - (ep.duration || 0)) > 1) { ep.duration = d; buildChunks(ep); dirty = true; }
+      if (dirty) { await saveEpisode(ep); if (App.ep === ep) { renderAll(); setChunk(Math.max(0, chunkAt(pl.time()))); } }
+    }).catch(showError);
+  } else {
+    const blob = await getAudioBlob(ep);
+    if (App.ep !== ep) return;
+    if (blob) await attachAudioPlayer(ep, blob, start);
+    else renderChunkState();
+  }
+}
+async function attachAudioPlayer(ep, blob, start) {
+  const pl = new AudioPlayer(blob); App.player = pl;
+  await pl.ready();
+  if (App.player !== pl) return;
+  pl.setRate(S.rate || 1);
+  if (start > 0.5) pl.seek(start);
+  const d = pl.duration();
+  if (d && (!ep.duration || (Math.abs(d - ep.duration) > 2 && !ep.chunks.some(c => c.status !== 'none')))) { ep.duration = d; buildChunks(ep); await saveEpisode(ep); }
+  renderAll(); setupMediaSession();
+}
+async function openYouTube(input, t) {
+  const id = ytIdFrom(input);
+  if (!id) return toast('That doesn\'t look like a YouTube link.', { err: true });
+  let ep = await getEpisode('yt_' + id);
+  if (!ep) { ep = newEpisode({ id: 'yt_' + id, kind: 'youtube', ytId: id, title: 'YouTube ' + id }); await saveEpisode(ep); }
+  openEpisode(ep, t);
+}
+async function probeDuration(blob) {
+  return new Promise(res => {
+    const a = new Audio(); const url = URL.createObjectURL(blob); let done = false;
+    const fin = d => { if (done) return; done = true; URL.revokeObjectURL(url); res(isFinite(d) ? d : 0); };
+    a.preload = 'metadata'; a.onloadedmetadata = () => fin(a.duration); a.onerror = () => fin(0); a.src = url; setTimeout(() => fin(a.duration || 0), 10000);
+  });
+}
+async function openAudioFile(file) {
+  if (!file) return;
+  const id = 'au_' + fnv(`${file.name}|${file.size}|${file.lastModified}`) + fnv(`${file.size}#${file.name}`);
+  let ep = await getEpisode(id);
+  let d = await probeDuration(file);
+  if (!d) { const kind = await Cut.sniff(file); if (kind === 'mp3') { try { d = (await Cut.mp3Index(id, file)).dur; } catch {} } }
+  if (!ep) { ep = newEpisode({ id, kind: 'audio', title: file.name.replace(/\.[^.]+$/, ''), audio: { name: file.name, size: file.size, type: file.type, lastModified: file.lastModified }, duration: d }); buildChunks(ep); }
+  try { await DB.put('blobs', file, id); } catch (e) { toast('Couldn\'t keep a copy of the audio in browser storage; you may need to pick the file again next time.', { err: true }); }
+  navigator.storage?.persist?.().catch(() => {});
+  await saveEpisode(ep);
+  if (Folder.status === 'ready' && S.copyAudio) Folder.writeAudio(ep, file).catch(e => Folder.fail(e));
+  openEpisode(ep);
+}
+async function relinkAudio(file) {
+  const ep = App.ep; if (!ep || !file) return;
+  if (ep.audio && (file.size !== ep.audio.size)) { if (!confirm(`This file (${file.name}) isn't the same size as the original (${ep.audio.name}). Timings may not line up. Use it anyway?`)) return; }
+  await DB.put('blobs', file, ep.id).catch(() => {}); Cut.mp3Idx.delete(ep.id); Cut.sources.delete(ep.id);
+  await attachAudioPlayer(ep, file, ep.pos || 0); renderChunkState();
+}
+async function attachOwnAudio(file) {
+  const ep = App.ep; if (!ep || !file) return;
+  await DB.put('blobs', file, ep.id); ep.hasAudio = true; Cut.mp3Idx.delete(ep.id); Cut.sources.delete(ep.id);
+  ep.audio = { name: file.name, size: file.size, type: file.type, lastModified: file.lastModified };
+  await saveEpisode(ep); toast('Your audio file will be used for transcripts. Make sure it starts exactly where the video starts.'); renderChunkState();
+}
+async function importSubs(file) {
+  const ep = App.ep; if (!ep || !file) return;
+  const cues = parseSubtitles(await file.text());
+  if (!cues.length) return toast('No subtitle cues found in that file.', { err: true });
+  ep.source = { ...(ep.source || {}), captions: { provider: 'file', name: file.name, at: Date.now(), cues } };
+  if (!ep.duration) { ep.duration = cues[cues.length - 1].e; buildChunks(ep); }
+  ep.chunks.forEach(c => { if (c.status !== 'ready') { delete c.cues; c.sentences = []; c.next = 0; c.status = 'none'; } });
+  await saveEpisode(ep); renderAll();
+  toast(`Imported ${cues.length} subtitle lines. Parts already transcribed keep their text; use More › Transcribe this part again to switch them.`);
+}
+
+/* ---------- playback helpers ---------- */
+function seekTo(t) { App.player?.seek(t); App.lastSeek = Date.now(); App.pausedFor = -1; }
+function playSentence(k, { loop } = {}) {
+  const s = curSentences()[k]; if (!s || !App.player) return;
+  if (App.loopOn || loop) App.loopTarget = s;
+  seekTo(s.s + (App.ep.sync || 0)); App.player.play();
+  setActive(k);
+  if (!$('#shadowPanel').hidden && !Shadow.busy) Shadow.setSentence(s);
+}
+function prevSentence() {
+  const sents = curSentences(); if (!sents.length || !App.player) return;
+  const t = App.player.time() - (App.ep.sync || 0), k = sentenceAt(sents, t);
+  if (k >= 0 && t - sents[k].s > 1.2) return playSentence(k, { loop: App.loopOn });
+  if (k > 0) return playSentence(k - 1, { loop: App.loopOn });
+  const ci = App.chunkIdx; if (ci > 0) { const prev = App.ep.chunks[ci - 1]; seekTo(Math.max(prev.start, prev.end - 5)); }
+}
+function nextSentence() {
+  const sents = curSentences(); if (!App.player) return;
+  const t = App.player.time() - (App.ep.sync || 0), k = sentenceAt(sents, t);
+  if (k + 1 < sents.length) return playSentence(k + 1, { loop: App.loopOn });
+  const nc = App.ep.chunks[App.chunkIdx + 1]; if (nc) seekTo(nc.start + 0.01);
+}
+function replaySentence() { const k = App.active >= 0 ? App.active : sentenceAt(curSentences(), (App.player?.time() || 0) - (App.ep?.sync || 0)); if (k >= 0) playSentence(k); }
+function togglePlay() { const p = App.player; if (!p) return; if (p.playing()) p.pause(); else { if (App.pauseAfter && App.pausedFor >= 0) App.pausedFor = -2; p.play(); } setTimeout(updatePlayIcon, 50); }
+function playRange(s, e) {
+  return new Promise(res => {
+    if (!App.player) return res();
+    let done = false; const fin = () => { if (done) return; done = true; clearTimeout(guard); res(); };
+    const guard = setTimeout(() => { if (App.playUntilCb === fin) { App.playUntil = null; App.playUntilCb = null; App.player?.pause(); } fin(); }, ((e - s) / (S.rate || 1) + 4) * 1000);
+    App.playUntil = e - 0.06; App.playUntilCb = fin;
+    seekTo(s); App.player.play();
+  });
+}
+
+/* ---------- tick loop ---------- */
+function tick() {
+  const p = App.player, ep = App.ep; if (!p || !ep) return;
+  const t = p.time(), off = ep.sync || 0, playing = p.playing();
+  const ci = chunkAt(t);
+  if (ci >= 0 && ci !== App.chunkIdx) setChunk(ci);
+  const ch = curChunk();
+  if (ch && playing && S.autoProcess && ch.status === 'none' && !App.jobs.has(`${ep.id}:${ch.i}`)) processChunk(ep, ch.i);
+  if (ch && playing && S.prefetch && ch.end - t < 300) { const nx = ep.chunks[ch.i + 1]; if (nx && nx.status === 'none' && !App.jobs.has(`${ep.id}:${nx.i}`)) processChunk(ep, nx.i); }
+  const sents = ch?.sentences || [];
+  const k = sentenceAt(sents, t - off);
+  if (App.playUntil != null && t >= App.playUntil - 0.02) { const cb = App.playUntilCb; App.playUntil = null; App.playUntilCb = null; p.pause(); cb?.(); }
+  else if (playing && Date.now() - App.lastSeek > 350) {
+    const L = App.loopOn ? App.loopTarget : null;
+    if (L) {
+      if (t > L.e + off + 1.2 || t < L.s + off - 1.2) App.loopTarget = sents[k] || null;
+      else if (t >= L.e + off - 0.03) seekTo(L.s + off);
+    } else if (App.pauseAfter && k >= 0 && App.pausedFor !== k && App.pausedFor !== -2 && t >= sents[k].e + off - 0.04 && t < sents[k].e + off + 0.5) {
+      App.pausedFor = k; p.pause();
+    }
+  }
+  if (k !== App.active) { setActive(k); if (App.pausedFor === -2) App.pausedFor = -1; }
+  if (App.loopOn && !App.loopTarget && k >= 0) App.loopTarget = sents[k];
+  // scrub + time
+  const d = ep.duration || p.duration();
+  const sc = $('#scrub');
+  if (!sc.matches(':active')) { sc.max = d || 1; sc.value = t; }
+  $('#tCur').textContent = fmt(t); $('#tDur').textContent = fmt(d);
+  // position
+  if (playing && Date.now() - App.posSaved > 5000) { App.posSaved = Date.now(); ep.pos = t; ep.posAt = Date.now(); saveEpisode(ep, { bump: false, folder: false }).catch(() => {}); }
+}
+setInterval(tick, 60);
+setInterval(updatePlayIcon, 500);
+
+/* ---------- shadowing ---------- */
+const Shadow = {
+  sent: null, idx: -1, rec: null, blob: null, url: null, busy: false, chunks: [], stream: null, timer: null, meterTimer: null,
+  setSentence(s) {
+    this.sent = s || null; this.idx = App.active;
+    $('#shadowSent').innerHTML = s ? furiHtml(s.f) : 'Pick a sentence first.';
+    this.reset();
+  },
+  reset() {
+    if (this.url) URL.revokeObjectURL(this.url); this.url = null; this.blob = null;
+    $('#playMineBtn').disabled = $('#compareBtn').disabled = $('#checkBtn').disabled = true;
+    $('#diffOut').innerHTML = ''; $('#recWave').hidden = true; $('#recMeter').style.width = '0';
+  },
+  mime() { for (const m of ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus']) if (window.MediaRecorder?.isTypeSupported?.(m)) return m; return ''; },
+  async record() {
+    if (this.rec) return this.stop();
+    const s = this.sent; if (!s) return toast('Click a sentence first.');
+    if (!window.MediaRecorder) return toast('This browser can\'t record audio.', { err: true });
+    try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch { return toast('Microphone access was blocked. Allow it in your browser\'s site settings.', { err: true }); }
+    this.busy = true; this.reset();
+    const off = App.ep.sync || 0, dur = Math.max(0.6, s.e - s.s);
+    const mode = S.shadowMode;
+    if (mode === 'after') { await playRange(s.s + off, s.e + off); await sleep(150); }
+    const mt = this.mime(); this.chunks = [];
+    const rec = new MediaRecorder(this.stream, mt ? { mimeType: mt } : undefined); this.rec = rec;
+    rec.ondataavailable = e => { if (e.data.size) this.chunks.push(e.data); };
+    rec.onstop = () => this.finish(rec.mimeType || mt);
+    rec.start(100);
+    $('#recBtn').setAttribute('aria-pressed', 'true'); $('#recBtn').textContent = 'Stop';
+    const limit = (mode === 'after' ? dur * 1.5 + 1.2 : dur / (S.rate || 1) + 0.8) * 1000, t0 = Date.now();
+    this.meterTimer = setInterval(() => { $('#recMeter').style.width = Math.min(100, (Date.now() - t0) / limit * 100) + '%'; }, 80);
+    this.timer = setTimeout(() => this.stop(), limit);
+    if (mode === 'along') playRange(s.s + off, s.e + off);
+  },
+  stop() { clearTimeout(this.timer); clearInterval(this.meterTimer); if (this.rec?.state === 'recording') this.rec.stop(); },
+  async finish(type) {
+    this.stream?.getTracks().forEach(t => t.stop()); this.stream = null; this.rec = null; this.busy = false;
+    $('#recBtn').setAttribute('aria-pressed', 'false'); $('#recBtn').textContent = 'Record again';
+    this.blob = new Blob(this.chunks, { type: type || 'audio/webm' }); this.url = URL.createObjectURL(this.blob);
+    $('#playMineBtn').disabled = $('#compareBtn').disabled = false; $('#checkBtn').disabled = false;
+    this.drawWave().catch(() => {});
+  },
+  async drawWave() {
+    const buf = await decodeAudio(await this.blob.arrayBuffer());
+    const cv = $('#recWave'); cv.hidden = false; const g = cv.getContext('2d'); const W = cv.width = cv.clientWidth * devicePixelRatio || 600, H = cv.height = 44 * devicePixelRatio;
+    g.clearRect(0, 0, W, H); g.fillStyle = getComputedStyle(document.body).getPropertyValue('--rec').trim() || '#c33';
+    const d = buf.getChannelData(0), step = Math.max(1, Math.floor(d.length / W));
+    for (let x = 0; x < W; x++) { let m = 0; for (let i = x * step; i < (x + 1) * step && i < d.length; i++) m = Math.max(m, Math.abs(d[i])); const h = Math.max(1, m * H * 0.95); g.fillRect(x, (H - h) / 2, 1, h); }
+  },
+  playMine() { if (!this.url) return Promise.resolve(); App.player?.pause(); const a = new Audio(this.url); return new Promise(res => { a.onended = res; a.onerror = res; a.play().catch(res); }); },
+  async playOrig() { const s = this.sent; if (!s) return; const off = App.ep.sync || 0; await playRange(s.s + off, s.e + off); },
+  async compare() { await this.playOrig(); await sleep(250); await this.playMine(); },
+  async check() {
+    if (!this.blob || !this.sent) return;
+    const btn = $('#checkBtn'); btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      const ext = /mp4|m4a|aac/.test(this.blob.type) ? 'm4a' : /ogg/.test(this.blob.type) ? 'ogg' : 'webm';
+      const r = await sttTranscribe(this.blob, 'mine.' + ext, '日本語の発話です。');
+      const heard = r.segments.map(s => s.t).join('');
+      const target = [...normJa(plainOf(this.sent.f))], got = [...normJa(heard)];
+      const { hit, score } = lcsHits(target, got);
+      const out = $('#diffOut'); out.innerHTML = '';
+      out.append(el('div', {}, el('strong', {}, `${Math.round(score * 100)}% of the words matched`)));
+      const line = el('div', { class: 'ja', lang: 'ja' }); target.forEach((c, i) => line.append(el('span', { class: hit[i] ? 'hit' : 'miss' }, c))); out.append(line);
+      out.append(el('span', { class: 'heard ja', lang: 'ja' }, `Heard: ${heard || '(nothing)'}`));
+    } catch (e) { showError(e); }
+    finally { btn.disabled = false; btn.textContent = 'Check words'; }
+  },
+};
+function lcsHits(a, b) {
+  const n = a.length, m = b.length; if (!n) return { hit: [], score: 0 };
+  const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const hit = new Array(n).fill(false); let i = 0, j = 0;
+  while (i < n && j < m) { if (a[i] === b[j]) { hit[i] = true; i++; j++; } else if (dp[i + 1][j] >= dp[i][j + 1]) i++; else j++; }
+  return { hit, score: dp[0][0] / n };
+}
+
+/* ---------- dialogs: settings ---------- */
+const KEY_FIELDS = ['groq', 'gemini', 'supadata', 'openai', 'openrouter', 'custom'];
+function fillDatalist(id, list) { const dl = $('#' + id); dl.innerHTML = ''; list.forEach(m => dl.append(el('option', { value: m }))); }
+function onProviderChange(kind) {
+  if (kind === 'stt') { const p = PROVIDERS.stt[$('#sttProvider').value]; fillDatalist('sttModels', p.models); if (!p.models.includes($('#sttModel').value)) $('#sttModel').value = p.def; $('#sttBase').placeholder = p.base || 'https://your-endpoint/v1'; }
+  else { const p = PROVIDERS.llm[$('#llmProvider').value]; fillDatalist('llmModels', p.models); if (!p.models.includes($('#llmModel').value)) $('#llmModel').value = p.def; $('#llmBase').placeholder = p.base || 'https://your-endpoint/v1'; $('#llmHelp').textContent = p.help || ''; }
+}
+async function openSettings() {
+  const dlg = $('#settingsDlg');
+  if (Keys.locked) { try { await promptUnlock('Unlock your keys to edit settings.'); } catch { return; } }
+  for (const k of KEY_FIELDS) { const i = $('#k_' + k); i.value = Keys.get(k); i.type = $('#showKeys').checked ? 'text' : 'password'; }
+  for (const id of ['sttProvider', 'sttModel', 'sttBase', 'sttMaxMB', 'llmProvider', 'llmModel', 'llmBase', 'llmConc', 'level', 'ytSource', 'ytGeminiModel', 'chunkMin']) $('#' + id).value = S[id];
+  for (const id of ['autoProcess', 'prefetch', 'copyAudio']) $('#' + id).checked = !!S[id];
+  onProviderChange('stt'); $('#sttModel').value = S.sttModel; onProviderChange('llm'); $('#llmModel').value = S.llmModel;
+  renderLockState();
+  dlg.returnValue = '';
+  dlg.showModal();
+}
+function renderLockState() {
+  const box = $('#lockState'); box.innerHTML = '';
+  if (!window.crypto?.subtle) { box.append(el('span', { class: 'fineprint' }, 'Encryption needs HTTPS.')); return; }
+  if (Keys.encrypted) box.append(el('span', { class: 'status-ok' }, 'Locked with a passphrase. '), el('button', { class: 'btn small', type: 'button', onclick: async () => { await Keys.removeLock(); renderLockState(); toast('Passphrase removed.'); } }, 'Remove lock'));
+  else box.append(el('button', { class: 'btn small', type: 'button', onclick: async () => {
+    const p1 = prompt('Choose a passphrase. You\'ll enter it once per visit to use your keys.'); if (!p1) return;
+    const p2 = prompt('Type the passphrase again.'); if (p1 !== p2) return toast('The passphrases didn\'t match.', { err: true });
+    await saveKeysFromForm(); await Keys.lock(p1); renderLockState(); toast('Keys are now locked with your passphrase.');
+  } }, 'Lock with passphrase…'));
+  box.append(' ', el('button', { class: 'btn small quiet', type: 'button', onclick: () => { if (confirm('Delete all saved API keys from this browser?')) { Keys.forget(); KEY_FIELDS.forEach(k => $('#k_' + k).value = ''); renderLockState(); renderKeysNote(); } } }, 'Forget all keys'));
+}
+async function saveKeysFromForm() { const obj = {}; for (const k of KEY_FIELDS) { const v = $('#k_' + k).value.trim(); if (v) obj[k] = v; } await Keys.save(obj); }
+async function saveSettingsFromForm() {
+  await saveKeysFromForm();
+  for (const id of ['sttProvider', 'sttModel', 'sttBase', 'llmProvider', 'llmModel', 'llmBase', 'level', 'ytSource', 'ytGeminiModel']) S[id] = $('#' + id).value.trim();
+  S.sttMaxMB = clamp(+$('#sttMaxMB').value || 24, 4, 95); S.llmConc = clamp(+$('#llmConc').value || 2, 1, 6); S.chunkMin = clamp(+$('#chunkMin').value || 30, 5, 60);
+  for (const id of ['autoProcess', 'prefetch', 'copyAudio']) S[id] = $('#' + id).checked;
+  if (!S.sttModel) S.sttModel = PROVIDERS.stt[S.sttProvider].def; if (!S.llmModel) S.llmModel = PROVIDERS.llm[S.llmProvider].def;
+  saveSettings(); renderKeysNote(); if (App.ep) renderChunkState();
+  toast('Settings saved.');
+}
+async function testProvider(name) {
+  const out = (msg, ok) => toast((ok ? '✓ ' : '') + msg, { err: !ok });
+  const key = $('#k_' + name).value.trim(); if (!key) return out(`Enter a ${KEY_LABEL[name]} key first.`, false);
+  try {
+    let r;
+    if (name === 'gemini') r = await apiFetch(`${(S.llmProvider === 'gemini' && S.llmBase) || PROVIDERS.llm.gemini.base}/v1beta/models?pageSize=1`, { headers: { 'x-goog-api-key': key } }, { label: 'Gemini', retries: 0, timeout: 20000 });
+    else if (name === 'groq') r = await apiFetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: 'Bearer ' + key } }, { label: 'Groq', retries: 0, timeout: 20000 });
+    else if (name === 'openai') r = await apiFetch('https://api.openai.com/v1/models', { headers: { Authorization: 'Bearer ' + key } }, { label: 'OpenAI', retries: 0, timeout: 20000 });
+    else if (name === 'openrouter') r = await apiFetch('https://openrouter.ai/api/v1/key', { headers: { Authorization: 'Bearer ' + key } }, { label: 'OpenRouter', retries: 0, timeout: 20000 });
+    out(`${KEY_LABEL[name]} key works from this browser.`, true);
+  } catch (e) { out(e.message, false); }
+}
+
+/* ---------- dialogs: library ---------- */
+async function openLibrary() { await renderLibrary(); renderFolderState(); $('#libraryDlg').showModal(); }
+async function renderLibrary() {
+  const ul = $('#libList'); ul.innerHTML = '';
+  const eps = (await DB.all('episodes')).map(e => Cache.get(e.id) || e).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  if (!eps.length) { ul.append(el('li', { class: 'empty-note' }, 'Nothing here yet. Load a video or open an audio file.')); return; }
+  for (const ep of eps) {
+    ul.append(el('li', {},
+      el('span', { class: 'kind' }, ep.kind === 'youtube' ? 'YouTube' : 'Audio'),
+      el('button', { class: 'ep-open', type: 'button', onclick: () => openEpisodeById(ep.id) }, el('span', { class: 'ep-title' }, ep.title || ep.id), el('span', { class: 'ep-meta' }, epMeta(ep))),
+      el('button', { class: 'btn small', type: 'button', onclick: () => exportEpisode(ep) }, 'Export'),
+      el('button', { class: 'btn small quiet', type: 'button', onclick: async () => { if (confirm(`Delete "${ep.title}" from the library${Folder.status === 'ready' ? ' and the sync folder' : ''}?`)) { await deleteEpisode(ep.id); renderLibrary(); renderRecent(); } } }, 'Delete')));
+  }
+}
+function renderFolderState() {
+  const box = $('#folderState'); if (!box) return; box.innerHTML = '';
+  const row = (...k) => el('div', { style: 'display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.3rem 0' }, ...k);
+  if (Folder.status === 'unsupported') {
+    box.append(el('p', { class: 'help', style: 'margin:0' }, 'This browser can\'t connect to a folder (Safari and iOS don\'t support it). Use Export and Import below with iCloud Drive instead, or open this page in Chrome or Edge on a computer to sync a folder automatically.'));
+    return;
+  }
+  if (Folder.status === 'none') {
+    box.append(el('p', { class: 'help', style: 'margin:0 0 .5rem' }, 'Pick a folder, for example one inside iCloud Drive, and the library saves there automatically. Connect the same folder on your other computers to share it.'),
+      row(el('button', { class: 'btn primary', type: 'button', onclick: () => Folder.connect().catch(e => e.name !== 'AbortError' && showError(e)) }, 'Choose folder…')));
+  } else if (Folder.status === 'need-permission') {
+    box.append(row(el('span', {}, `Folder "${Folder.handle?.name}" needs permission again.`), el('button', { class: 'btn primary', type: 'button', onclick: () => Folder.reconnect().catch(showError) }, 'Allow access'), el('button', { class: 'btn quiet small', type: 'button', onclick: async () => { await Folder.disconnect(); renderFolderState(); } }, 'Disconnect')));
+  } else {
+    box.append(row(el('span', { class: 'status-ok' }, `Syncing with "${Folder.handle?.name}"`), el('span', { class: 'fineprint' }, Folder.lastSync ? `last synced ${new Date(Folder.lastSync).toLocaleTimeString()}` : ''),
+      el('button', { class: 'btn small', type: 'button', onclick: () => Folder.sync().then(() => toast('Library synced.')).catch(showError) }, Folder.syncing ? 'Syncing…' : 'Sync now'),
+      el('button', { class: 'btn quiet small', type: 'button', onclick: async () => { await Folder.disconnect(); renderFolderState(); } }, 'Disconnect')));
+  }
+}
+function openVocab() {
+  const ch = curChunk(); const body = $('#vocabBody'); body.innerHTML = '';
+  const seen = new Map();
+  (ch?.sentences || []).forEach((s, k) => (s.v || []).forEach(v => { if (!seen.has(v.w)) seen.set(v.w, { ...v, k, s }); }));
+  if (!seen.size) body.append(el('tr', {}, el('td', { class: 'empty-note' }, 'No vocabulary yet for this part.')));
+  for (const v of seen.values()) body.append(el('tr', {}, el('td', { lang: 'ja', html: `<ruby>${escHtml(v.w)}<rt>${escHtml(v.r)}</rt></ruby>` }), el('td', {}, v.m, el('div', { class: 'ex ja', lang: 'ja', title: 'Play this sentence', onclick: () => { $('#vocabDlg').close(); playSentence(v.k); } }, plainOf(v.s.f)))));
+  $('#vocabDlg').dataset.tsv = [...seen.values()].map(v => [v.w, v.r, v.m, plainOf(v.s.f), v.s.en].map(x => String(x || '').replace(/\t|\n/g, ' ')).join('\t')).join('\n');
+  $('#vocabTitle').textContent = `Vocabulary · ${ch ? `${fmt(ch.start)}–${fmt(ch.end)}` : ''}`;
+  $('#vocabDlg').showModal();
+}
+
+/* ---------- line interactions ---------- */
+$('#lines').addEventListener('click', async e => {
+  const actEl = e.target.closest('[data-act]'); const li = e.target.closest('.line'); if (!li || !actEl) return;
+  const k = +li.dataset.k, s = curSentences()[k]; if (!s) return;
+  const act = actEl.dataset.act;
+  if (act === 'reveal' && document.body.classList.contains('trans-blur')) { li.classList.toggle('reveal'); return; }
+  if (act === 'seek' || act === 'reveal') { if (window.getSelection()?.toString()) return; playSentence(k); return; }
+  if (act === 'loop') { App.loopOn = true; App.loopTarget = s; applyViewModes(); playSentence(k, { loop: true }); return; }
+  if (act === 'star') { s.star = !s.star; actEl.setAttribute('aria-pressed', s.star ? 'true' : 'false'); await saveEpisode(App.ep); return; }
+  if (act === 'shadow') { openShadow(true); setActive(k); Shadow.setSentence(s); return; }
+  if (act === 'vocab') {
+    let box = li.querySelector('.sub.vocab'); if (box) { box.remove(); return; }
+    box = el('div', { class: 'sub vocab' }, el('h4', {}, 'Words'), ...s.v.map(v => el('div', { class: 'vocab-row' }, el('span', { class: 'w ja', lang: 'ja' }, v.w, el('span', { class: 'r' }, v.r)), el('span', {}, v.m))));
+    li.append(box); return;
+  }
+  if (act === 'grammar') toggleGrammar(li, k);
+});
+async function toggleGrammar(li, k) {
+  const s = curSentences()[k]; if (!s) return;
+  let box = li.querySelector('.sub.gram'); if (box) { box.remove(); return; }
+  box = el('div', { class: 'sub gram' }, el('p', { class: 'fineprint', style: 'margin:0' }, 'Explaining…')); li.append(box);
+  try {
+    if (!s.g) { s.g = await explainGrammar(s, k); await saveEpisode(App.ep); }
+    const g = s.g; box.innerHTML = '';
+    box.append(el('h4', {}, 'Grammar'), el('p', { class: 'gist' }, g.gist));
+    if (g.parts?.length) box.append(el('ul', { class: 'parts' }, ...g.parts.map(p => el('li', {}, el('b', { class: 'ja', lang: 'ja' }, p.jp), el('span', {}, p.role)))));
+    for (const p of g.points || []) box.append(el('div', { class: 'pt' }, el('b', { class: 'ja', lang: 'ja' }, p.form), p.level && p.level !== '—' ? el('span', { class: 'lvl' }, p.level) : null, el('div', {}, p.meaning), el('div', { class: 'fineprint' }, p.here)));
+    if (g.nuance) box.append(el('p', { class: 'fineprint', style: 'margin:.5rem 0 0' }, g.nuance));
+  } catch (e) { box.remove(); showError(e); }
+}
+function openShadow(force) {
+  const panel = $('#shadowPanel'); const show = force || panel.hidden;
+  panel.hidden = !show; $('#shadowBtn').setAttribute('aria-pressed', show ? 'true' : 'false');
+  if (show) Shadow.setSentence(curSentence());
+}
+
+/* ---------- wiring ---------- */
+function wire() {
+  for (const f of ['#ytFormTop', '#ytFormHero']) $(f).addEventListener('submit', e => { e.preventDefault(); const inp = e.target.querySelector('input'); openYouTube(inp.value); inp.value = ''; });
+  $('#fileInput').addEventListener('change', e => { openAudioFile(e.target.files[0]).catch(showError); e.target.value = ''; });
+  $('#relinkInput').addEventListener('change', e => { relinkAudio(e.target.files[0]).catch(showError); e.target.value = ''; });
+  $('#attachInput').addEventListener('change', e => { attachOwnAudio(e.target.files[0]).catch(showError); e.target.value = ''; $('#epMenu').open = false; });
+  $('#subsInput').addEventListener('change', e => { importSubs(e.target.files[0]).catch(showError); e.target.value = ''; $('#epMenu').open = false; });
+  $('#importInput').addEventListener('change', e => { importFiles([...e.target.files]).catch(showError); e.target.value = ''; });
+  $('#libBtn').addEventListener('click', openLibrary);
+  $('#setBtn').addEventListener('click', openSettings);
+  $('#exportAllBtn').addEventListener('click', () => exportAll().catch(showError));
+  $$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close('cancel')));
+  $('#settingsDlg').addEventListener('close', () => { if ($('#settingsDlg').returnValue === 'save') saveSettingsFromForm().catch(showError); });
+  $('#sttProvider').addEventListener('change', () => onProviderChange('stt'));
+  $('#llmProvider').addEventListener('change', () => onProviderChange('llm'));
+  $('#showKeys').addEventListener('change', e => KEY_FIELDS.forEach(k => $('#k_' + k).type = e.target.checked ? 'text' : 'password'));
+  $$('[data-test]').forEach(b => b.addEventListener('click', () => testProvider(b.dataset.test)));
+  $('#copyTsvBtn').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('#vocabDlg').dataset.tsv || ''); toast('Copied. Paste into a spreadsheet or Anki import.'); } catch { toast('Couldn\'t access the clipboard.', { err: true }); } });
+  // transport
+  $('#playBtn').addEventListener('click', togglePlay);
+  $('#prevBtn').addEventListener('click', prevSentence);
+  $('#nextBtn').addEventListener('click', nextSentence);
+  $('#replayBtn').addEventListener('click', replaySentence);
+  $('#loopBtn').addEventListener('click', () => { App.loopOn = !App.loopOn; App.loopTarget = App.loopOn ? curSentence() : null; applyViewModes(); });
+  $('#pauseAfterBtn').addEventListener('click', () => { App.pauseAfter = !App.pauseAfter; S.pauseAfter = App.pauseAfter; saveSettings(); applyViewModes(); });
+  $('#furiBtn').addEventListener('click', () => { S.furi = { show: 'hover', hover: 'hide', hide: 'show' }[S.furi]; saveSettings(); applyViewModes(); });
+  $('#transBtn').addEventListener('click', () => { S.trans = { show: 'blur', blur: 'hide', hide: 'show' }[S.trans]; saveSettings(); applyViewModes(); });
+  $('#shadowBtn').addEventListener('click', () => openShadow());
+  $('#followBtn').addEventListener('click', () => { S.follow = !S.follow; saveSettings(); applyViewModes(); if (S.follow) { App.userScroll = 0; const li = lineEl(App.active); if (li) followLine(li); } });
+  $('#starOnlyBtn').addEventListener('click', () => { App.starOnly = !App.starOnly; applyViewModes(); renderLines(); });
+  $('#syncMinus').addEventListener('click', () => nudgeSync(-0.2));
+  $('#syncPlus').addEventListener('click', () => nudgeSync(0.2));
+  $('#speedSel').addEventListener('change', e => setRate(+e.target.value));
+  const sc = $('#scrub');
+  sc.addEventListener('input', () => { $('#tCur').textContent = fmt(+sc.value); });
+  sc.addEventListener('change', () => seekTo(+sc.value));
+  // shadow
+  $('#recBtn').addEventListener('click', () => Shadow.record());
+  $('#playOrigBtn').addEventListener('click', () => Shadow.playOrig());
+  $('#playMineBtn').addEventListener('click', () => Shadow.playMine());
+  $('#compareBtn').addEventListener('click', () => Shadow.compare());
+  $('#checkBtn').addEventListener('click', () => Shadow.check());
+  const setMode = m => { S.shadowMode = m; saveSettings(); $('#modeAfter').setAttribute('aria-pressed', m === 'after' ? 'true' : 'false'); $('#modeAlong').setAttribute('aria-pressed', m === 'along' ? 'true' : 'false'); };
+  $('#modeAfter').addEventListener('click', () => setMode('after')); $('#modeAlong').addEventListener('click', () => setMode('along')); setMode(S.shadowMode);
+  // episode menu
+  $('#epMenu').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return; $('#epMenu').open = false;
+    const ep = App.ep, ch = curChunk(); if (!ep) return;
+    if (b.dataset.act === 'vocab') openVocab();
+    if (b.dataset.act === 'retranscribe' && ch) { if (confirm('Transcribe this part again from scratch? Its current lines, grammar notes and stars will be replaced.')) processChunk(ep, ch.i, { redoCues: true }); }
+    if (b.dataset.act === 'reannotate' && ch?.cues?.length) { if (confirm('Redo furigana, translations and vocabulary for this part? The transcript itself is kept.')) processChunk(ep, ch.i, { redoAnnot: true }); }
+    if (b.dataset.act === 'rename') { const t = prompt('Episode title', ep.title); if (t?.trim()) { ep.title = t.trim(); await saveEpisode(ep); renderAll(); } }
+    if (b.dataset.act === 'export') exportEpisode(ep).catch(showError);
+    if (b.dataset.act === 'copyLink' && ep.ytId) { const url = `${location.origin}${location.pathname}?yt=${ep.ytId}`; navigator.clipboard?.writeText(url).then(() => toast('Link copied.'), () => toast(url)); }
+  });
+  document.addEventListener('click', e => { const m = $('#epMenu'); if (m.open && !m.contains(e.target)) m.open = false; });
+  // scrolling: pause auto-follow briefly when the reader scrolls
+  for (const ev of ['wheel', 'touchmove']) window.addEventListener(ev, () => { App.userScroll = Date.now(); }, { passive: true });
+  // keyboard
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input, textarea, select, [contenteditable]') || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
+    if (!App.ep) return;
+    const k = e.key.toLowerCase();
+    const map = {
+      ' ': togglePlay, arrowleft: prevSentence, arrowright: nextSentence, r: replaySentence,
+      l: () => $('#loopBtn').click(), p: () => $('#pauseAfterBtn').click(), f: () => $('#furiBtn').click(), t: () => $('#transBtn').click(),
+      g: () => { const li = lineEl(App.active); if (li) toggleGrammar(li, App.active); },
+      m: () => { openShadow(true); Shadow.record(); },
+    };
+    if (map[k]) { e.preventDefault(); map[k](); }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && App.ep && App.player) { App.ep.pos = App.player.time(); App.ep.posAt = Date.now(); saveEpisode(App.ep, { bump: false }).catch(() => {}); }
+    if (document.visibilityState === 'visible' && Folder.status === 'ready' && Date.now() - Folder.lastSync > 60000) Folder.sync().catch(() => {});
+  });
+  window.addEventListener('pagehide', () => { if (App.ep && App.player) { App.ep.pos = App.player.time(); App.ep.posAt = Date.now(); DB.put('episodes', JSON.parse(JSON.stringify(App.ep))).catch(() => {}); } });
+  for (const ev of ['play', 'playing', 'pause', 'ended']) $('#audioEl').addEventListener(ev, updatePlayIcon);
+  $('#audioEl').addEventListener('pause', () => { if (App.ep) { App.ep.pos = App.player?.time() || 0; App.ep.posAt = Date.now(); saveEpisode(App.ep, { bump: false }).catch(() => {}); } });
+}
+async function nudgeSync(d) {
+  const ep = App.ep; if (!ep) return;
+  ep.sync = Math.round(((ep.sync || 0) + d) * 10) / 10;
+  $('#syncVal').textContent = `${ep.sync >= 0 ? '+' : ''}${ep.sync.toFixed(1)}s`;
+  await saveEpisode(ep);
+}
+function setupMediaSession() {
+  if (!('mediaSession' in navigator) || !App.ep) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: App.ep.title || 'Kikitori', artist: '聞き取り' });
+    navigator.mediaSession.setActionHandler('play', () => App.player?.play());
+    navigator.mediaSession.setActionHandler('pause', () => App.player?.pause());
+    navigator.mediaSession.setActionHandler('previoustrack', prevSentence);
+    navigator.mediaSession.setActionHandler('nexttrack', nextSentence);
+  } catch {}
+}
+
+/* ---------- boot ---------- */
+async function boot() {
+  const setHdr = () => document.documentElement.style.setProperty('--hdr', $('.bar').offsetHeight + 'px'); addEventListener('resize', setHdr); setHdr();
+  wire(); applyViewModes(); renderSpeed(); renderKeysNote();
+  window.addEventListener('unhandledrejection', e => { if (e.reason instanceof UserError || e.reason instanceof ApiError) { e.preventDefault(); showError(e.reason); } });
+  try { await DB.open(); } catch (e) { toast('Browser storage is unavailable (private browsing?). The library won\'t be saved.', { err: true }); }
+  await Folder.init().catch(e => console.warn(e));
+  // reset jobs that were interrupted by a reload
+  for (const ep of await DB.all('episodes').catch(() => [])) { let d = false; ep.chunks?.forEach(c => { if (c.status === 'working') { c.status = c.sentences?.length ? 'partial' : (c.cues?.length ? 'partial' : 'none'); d = true; } }); if (d) await DB.put('episodes', ep); }
+  const q = new URLSearchParams(location.search);
+  const t = q.has('t') ? parseFloat(q.get('t')) : undefined;
+  if (q.get('yt')) openYouTube(q.get('yt'), t);
+  else if (q.get('ep')) openEpisodeById(q.get('ep'), t);
+  else renderRecent();
+}
+boot();
+</script>
+</body>
+</html>
