@@ -64,12 +64,14 @@ a{color:inherit}
 .icon-btn.big svg{width:1.4em;height:1.4em}
 .spacer{flex:1}
 /* welcome */
-.welcome{max-width:880px;margin:0 auto;padding:clamp(1.5rem,6vw,4.5rem) 1.25rem 4rem}
+.welcome{max-width:1120px;margin:0 auto;padding:clamp(1.25rem,4vw,3rem) 1.25rem 4rem}
+.intro{max-width:880px;margin:0 auto 1.6rem}
 .demo{background:var(--screen);border-radius:var(--r-l);padding:clamp(1.5rem,5vw,3rem) 1.5rem 1.6rem;text-align:center;position:relative;overflow:hidden}
 .demo::after{content:"";position:absolute;inset:auto 0 0 0;height:4px;background:repeating-linear-gradient(90deg,var(--telop) 0 40px,transparent 40px 46px);opacity:.75}
 .demo .telop-text{font-size:clamp(1.6rem,5vw,2.8rem);line-height:2.1;margin:0}
 .demo .en{color:#c8cee0;margin:.2rem 0 0;font-size:1rem}
 .welcome h1{font-size:1.35rem;margin:2rem 0 .3rem;font-weight:700}
+.welcome .starts,.welcome .keys-note{max-width:880px;margin-left:auto;margin-right:auto}
 .welcome p.lead{margin:0 0 1.4rem;color:var(--mute);max-width:62ch}
 .starts{display:grid;grid-template-columns:1fr auto;gap:.75rem;align-items:stretch}
 .starts .yt-form{max-width:none}
@@ -77,7 +79,53 @@ a{color:inherit}
 .starts .btn{padding:.7rem 1.1rem}
 .keys-note{margin-top:1.4rem;padding:.9rem 1rem;border-left:3px solid var(--telop);background:var(--paper);border-radius:0 var(--r-m) var(--r-m) 0;font-size:.95rem}
 .keys-note ul{margin:.3rem 0 0;padding-left:1.1rem}
-.recent h2{font-size:1rem;margin:2.2rem 0 .5rem;font-weight:700}
+.library{margin-top:2.4rem}
+.lib-head{display:flex;align-items:baseline;gap:.4rem 1rem;flex-wrap:wrap;padding-bottom:.6rem;border-bottom:1px solid var(--line)}
+.lib-head h2{margin:0;font-size:1.3rem;font-weight:900}
+.lib-where{margin:0;color:var(--mute);font-size:.85rem;flex:1;min-width:12rem}
+.lib-tools{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin:.9rem 0 0}
+.lib-tools input{flex:1;min-width:12rem;max-width:26rem;border:1px solid var(--line);border-radius:var(--r-m);background:var(--paper);padding:.45rem .75rem}
+.lib-grid{list-style:none;margin:1.1rem 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:1.4rem 1rem}
+.lib-card{min-width:0}
+.lib-thumb-btn{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;border-radius:var(--r-m)}
+.thumb{position:relative;aspect-ratio:16/9;border-radius:var(--r-m);overflow:hidden;background:var(--screen)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s}
+.lib-thumb-btn:hover .thumb img{transform:scale(1.03)}
+@media (prefers-reduced-motion:reduce){.thumb img{transition:none}.lib-thumb-btn:hover .thumb img{transform:none}}
+.audio-thumb{display:grid;place-items:center;height:100%;font-size:2.6rem}
+.dur{position:absolute;right:.4rem;bottom:.7rem;background:rgba(12,17,32,.86);color:#fff;font-size:.74rem;padding:.05rem .4rem;border-radius:4px;font-variant-numeric:tabular-nums}
+.parts-bar{position:absolute;left:0;right:0;bottom:0;height:5px;display:flex;gap:2px;background:rgba(12,17,32,.6)}
+.parts-bar i{display:block;background:rgba(255,255,255,.28)}
+.parts-bar i.ready{background:var(--telop)}
+.parts-bar i.partial{background:linear-gradient(90deg,var(--telop) 50%,rgba(255,255,255,.28) 50%)}
+.thumb .pos{position:absolute;bottom:-1px;width:3px;height:9px;margin-left:-1px;background:#fff;box-shadow:0 0 0 1px var(--telop-ink);border-radius:1px}
+.lib-row{display:flex;align-items:flex-start;gap:.25rem;margin-top:.55rem}
+.lib-text{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer}
+.lib-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-weight:700;line-height:1.4;margin-bottom:.15rem}
+.lib-meta{display:block;color:var(--mute);font-size:.82rem;line-height:1.45}
+.lib-text:hover .lib-title{text-decoration:underline;text-underline-offset:3px}
+.lib-menu>summary{padding:.1rem .45rem;font-size:1rem;line-height:1}
+.lib-empty{grid-column:1/-1;color:var(--mute);padding:1.5rem 0}
+.folder-bar{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin:.9rem 0 0}
+.fchip{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:.28rem .75rem;font-size:.86rem;cursor:pointer}
+.fchip .n{color:var(--mute);font-size:.78rem;font-variant-numeric:tabular-nums}
+.fchip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.fchip[aria-pressed="true"] .n{color:inherit;opacity:.75}
+.fchip.drop{outline:2px dashed var(--telop);outline-offset:2px}
+.fchip.add{border-style:dashed;color:var(--mute)}
+.folder-bar .menu>summary{padding:.2rem .5rem}
+.lib-card[draggable="true"]{cursor:grab}
+.lib-card.dragging{opacity:.45}
+.menu-pop .sep{border-top:1px solid var(--line);margin:.3rem 0}
+.menu-pop .hd{font-size:.75rem;color:var(--mute);padding:.25rem .6rem 0}
+.menu-pop button[aria-current="true"]::before{content:"✓ "}
+.usage-table{width:100%;border-collapse:collapse;font-size:.9rem;margin:.3rem 0}
+.usage-table td{border-bottom:1px solid var(--line);padding:.4rem .3rem;vertical-align:top}
+.usage-table td:last-child{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.usage-table tr.total td{font-weight:700;border-bottom:0}
+.steps{margin:.3rem 0 .6rem;padding-left:1.2rem;font-size:.9rem}
+.steps li{margin:.25rem 0}
+.line.loose .jp::after{content:"≈";color:var(--warn);font-size:.75em;margin-left:.3em}
 .ep-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
 .ep-list li{display:flex;gap:.75rem;align-items:center;padding:.6rem .2rem;border-bottom:1px solid var(--line)}
 .ep-list .ep-open{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer}
@@ -92,11 +140,12 @@ a{color:inherit}
 .vbox{position:relative;aspect-ratio:16/9;background:#000}
 .vbox>div,.vbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .screen .title-strip{color:#c8cee0;font-size:.85rem;padding:.9rem 1.1rem 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.telop{padding:.6rem 1.1rem 1rem;min-height:6.2rem;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.telop{--telop-h:9.6rem;height:var(--telop-h);padding:.55rem 1.1rem .8rem;display:flex;flex-direction:column;justify-content:center;text-align:center;overflow:hidden}
+.telop-inner{flex:none}
 .telop .telop-text{font-size:clamp(1.25rem,2.3vw,1.95rem);line-height:2.05;margin:0}
-.telop .ten{color:#c8cee0;margin:.1rem 0 0;font-size:.98rem;line-height:1.45}
+.telop .ten{color:#c8cee0;margin:.1rem 0 0;font-size:.98rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .telop.empty .telop-text{color:#9aa4bd;text-shadow:none;font-weight:500;font-size:1rem}
-.is-audio .telop{min-height:12rem}
+.is-audio .telop{--telop-h:13.5rem}
 .relink{padding:1rem 1.1rem;color:#e6e9f1;font-size:.92rem;border-top:1px solid var(--screen-2)}
 .relink .btn{margin-top:.5rem}
 .scrub-wrap{display:flex;align-items:center;gap:.6rem;font-size:.8rem;color:var(--mute);font-variant-numeric:tabular-nums}
@@ -231,7 +280,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
   .bar{position:relative}
   .left{position:sticky;top:0;z-index:8;background:var(--fog);padding:.4rem 0;gap:.45rem;max-height:none;overflow:visible}
   .is-yt .telop{display:none}
-  .is-audio .telop{min-height:6.5rem}
+  .is-audio .telop{--telop-h:9rem}
   .rail{top:auto;position:static}
   .shadow{max-height:40vh;overflow:auto}
 }
@@ -249,6 +298,13 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
   .field .help,.help{grid-column:1}
   .starts{grid-template-columns:1fr}
   .line{grid-template-columns:2.9rem minmax(0,1fr)}
+  .lib-grid{grid-template-columns:1fr;gap:.9rem}
+  .lib-card{display:grid;grid-template-columns:8.6rem minmax(0,1fr);gap:.75rem;align-items:start}
+  .lib-row{margin-top:0}
+  .lib-title{font-size:.95rem}
+  .dur{bottom:.55rem;font-size:.7rem}
+  .audio-thumb{font-size:1.8rem}
+  .lib-where{flex-basis:100%;order:3}
   .line .jp{font-size:1.05rem}
   .transport .speed .lbl{display:none}
 }
@@ -275,12 +331,14 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
 
 <main id="main">
   <section class="welcome" id="welcome">
+    <div class="intro" id="intro">
     <div class="demo" aria-hidden="true">
       <p class="telop-text ja" lang="ja"><span class="fr" data-r="き">聞</span>き<span class="fr" data-r="と">取</span>れなかったら、もう<span class="fr" data-r="いちど">一度</span>。</p>
       <p class="en">Didn't catch it? Once more.</p>
     </div>
     <h1>Listen sentence by sentence</h1>
     <p class="lead">Load a Japanese YouTube video or an audio file. Each 30-minute part is transcribed only when you play it, with furigana, an English translation and key vocabulary for every sentence. Click a line to jump there, loop it, or record yourself shadowing it.</p>
+    </div>
     <div class="starts">
       <form class="yt-form" id="ytFormHero" autocomplete="off">
         <input id="ytInputHero" type="text" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube link">
@@ -289,10 +347,23 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
       <label class="btn" for="fileInput">Open audio file</label>
     </div>
     <div class="keys-note" id="keysNote"></div>
-    <div class="recent" id="recentWrap" hidden>
-      <h2>Recent</h2>
-      <ul class="ep-list" id="recentList"></ul>
-    </div>
+    <section class="library" id="librarySection" aria-labelledby="libHead">
+      <div class="lib-head">
+        <h2 id="libHead">Library</h2>
+        <p class="lib-where" id="libWhere">Saved in this browser on this device.</p>
+        <button class="btn small" type="button" id="syncBtn">Sync &amp; backup</button>
+      </div>
+      <div class="lib-tools" id="libTools" hidden>
+        <input id="libSearch" type="search" placeholder="Search titles" aria-label="Search the library" autocomplete="off" spellcheck="false">
+        <div class="seg-ctl" role="group" aria-label="Show" id="libKinds">
+          <button type="button" data-kind="all" aria-pressed="true">All</button>
+          <button type="button" data-kind="youtube" aria-pressed="false">YouTube</button>
+          <button type="button" data-kind="audio" aria-pressed="false">Audio</button>
+        </div>
+      </div>
+      <div class="folder-bar" id="folderBar" aria-label="Folders"></div>
+      <ul class="lib-grid" id="libGrid"></ul>
+    </section>
   </section>
 
   <section class="stage" id="stage" hidden>
@@ -301,8 +372,10 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
         <div class="vbox" id="vbox" hidden><div id="ytMount"></div></div>
         <div class="title-strip" id="audioTitle" hidden></div>
         <div class="telop empty" id="telop" aria-live="off">
-          <p class="telop-text ja" lang="ja" id="telopJa">Press play</p>
-          <p class="ten" id="telopEn"></p>
+          <div class="telop-inner" id="telopInner">
+            <p class="telop-text ja" lang="ja" id="telopJa">Press play</p>
+            <p class="ten" id="telopEn"></p>
+          </div>
         </div>
         <div class="relink" id="relink" hidden></div>
         <audio id="audioEl" preload="metadata" playsinline></audio>
@@ -362,6 +435,8 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
             <summary class="btn small" aria-label="Episode options">More</summary>
             <div class="menu-pop">
               <button type="button" data-act="vocab">Vocabulary in this part…</button>
+              <button type="button" data-act="usage">What this part used…</button>
+              <button type="button" data-act="folder">Move to folder…</button>
               <button type="button" data-act="retranscribe">Transcribe this part again</button>
               <button type="button" data-act="reannotate">Redo translations for this part</button>
               <label for="subsInput">Import subtitles (.srt / .vtt)…</label>
@@ -435,6 +510,10 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
         <div class="field"><label for="ytGeminiModel">Gemini model</label><input id="ytGeminiModel" list="geminiModels" spellcheck="false"><datalist id="geminiModels"><option value="gemini-3.1-flash-lite"><option value="gemini-3.5-flash-lite"><option value="gemini-flash-lite-latest"><option value="gemini-3.8-flash"></datalist></div>
       </fieldset>
       <fieldset>
+        <legend>Usage this month</legend>
+        <div id="usageMonth"></div>
+      </fieldset>
+      <fieldset>
         <legend>Processing &amp; playback</legend>
         <div class="check"><input type="checkbox" id="autoProcess"><label for="autoProcess">Transcribe a part automatically when I start playing it</label></div>
         <div class="check"><input type="checkbox" id="prefetch"><label for="prefetch">Prepare the next part when 5 minutes remain</label></div>
@@ -448,10 +527,14 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
 </dialog>
 
 <dialog id="libraryDlg" aria-labelledby="libTitle">
-  <div class="dlg-head"><h2 id="libTitle">Library</h2><button class="btn quiet small" type="button" data-close>Close</button></div>
+  <div class="dlg-head"><h2 id="libTitle">Sync &amp; backup</h2><button class="btn quiet small" type="button" data-close>Close</button></div>
   <div class="dlg-body">
     <fieldset style="border-top:0;margin-top:0">
-      <legend>Sync folder</legend>
+      <legend>On every device (GitHub)</legend>
+      <div id="cloudState"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Sync folder on this computer</legend>
       <div id="folderState"></div>
     </fieldset>
     <fieldset>
@@ -461,10 +544,6 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
         <button class="btn" type="button" id="exportAllBtn">Export everything</button>
       </div>
       <p class="help" style="margin-top:.5rem">On iPhone and iPad, export and choose Save to Files › iCloud Drive; import from the same place on another device. Audio files aren't included, so you'll be asked to pick the matching file once per device.</p>
-    </fieldset>
-    <fieldset>
-      <legend>Episodes</legend>
-      <ul class="ep-list" id="libList"></ul>
     </fieldset>
   </div>
 </dialog>
@@ -484,6 +563,11 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
 <dialog id="vocabDlg" aria-labelledby="vocabTitle">
   <div class="dlg-head"><h2 id="vocabTitle">Vocabulary</h2><button class="btn small" type="button" id="copyTsvBtn">Copy as TSV</button><button class="btn quiet small" type="button" data-close>Close</button></div>
   <div class="dlg-body"><table class="vocab-table"><tbody id="vocabBody"></tbody></table></div>
+</dialog>
+
+<dialog id="infoDlg" aria-labelledby="infoTitle">
+  <div class="dlg-head"><h2 id="infoTitle"></h2><button class="btn quiet small" type="button" data-close>Close</button></div>
+  <div class="dlg-body" id="infoBody"></div>
 </dialog>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
@@ -521,12 +605,13 @@ function fmt(t) {
 function fnv(str) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
 const slug = s => String(s || 'episode').normalize('NFKC').replace(/[\\/:*?"<>|#%{}^~[\]`]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'episode';
 const FURI_RE = /\{([^{}|]+)\|([^{}]+)\}/g;
+const cleanFuri = f => String(f ?? '').replace(/\{([^{}|]+)\|\s*\}/g, '$1').replace(/\{([^{}|]+)\}/g, '$1');
 function furiHtml(f) {
-  f = String(f ?? ''); let out = '', last = 0;
+  f = cleanFuri(f); let out = '', last = 0;
   for (const m of f.matchAll(FURI_RE)) { out += escHtml(f.slice(last, m.index)) + `<span class="fr" data-r="${escHtml(m[2])}">${escHtml(m[1])}</span>`; last = m.index + m[0].length; }
   return out + escHtml(f.slice(last));
 }
-const plainOf = f => String(f ?? '').replace(FURI_RE, '$1');
+const plainOf = f => cleanFuri(f).replace(FURI_RE, '$1');
 const normJa = s => String(s ?? '').replace(/[\s、。，．,.!?！？「」『』（）()\[\]【】…‥・:：;；"“”'’‘〜~♪]/g, '');
 const prefersReducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 class UserError extends Error { constructor(msg, action) { super(msg); this.action = action; } }
@@ -570,7 +655,7 @@ const S = Object.assign({}, DEFAULTS, LS.get('kikitori.settings', {}));
 const saveSettings = () => LS.set('kikitori.settings', S);
 
 /* ---------- API keys (optionally passphrase-encrypted) ---------- */
-const KEY_LABEL = { groq: 'Groq', openai: 'OpenAI', gemini: 'Google Gemini', supadata: 'Supadata', openrouter: 'OpenRouter', custom: 'custom endpoint' };
+const KEY_LABEL = { groq: 'Groq', openai: 'OpenAI', gemini: 'Google Gemini', supadata: 'Supadata', openrouter: 'OpenRouter', custom: 'custom endpoint', github: 'GitHub sync' };
 const b64 = u8 => btoa(String.fromCharCode(...new Uint8Array(u8)));
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function deriveKey(pass, salt) {
@@ -613,7 +698,7 @@ function promptUnlock(msg) {
     $('#unlockErr').textContent = ''; $('#unlockPass').value = ''; dlg.returnValue = '';
     const onClose = async () => {
       if (dlg.returnValue !== 'ok') { dlg.removeEventListener('close', onClose); return reject(new UserError('Keys are still locked.')); }
-      try { await Keys.unlock($('#unlockPass').value); dlg.removeEventListener('close', onClose); renderKeysNote(); resolve(); }
+      try { await Keys.unlock($('#unlockPass').value); dlg.removeEventListener('close', onClose); renderKeysNote(); resolve(); if (Cloud.status === 'ready') Cloud.sync().catch(() => {}); }
       catch { $('#unlockErr').textContent = 'That passphrase didn\'t work.'; dlg.returnValue = ''; dlg.showModal(); }
     };
     dlg.addEventListener('close', onClose);
@@ -667,6 +752,37 @@ function showError(e) {
   else toast(msg, { err: true });
 }
 
+/* ---------- usage (actual tokens / audio seconds / credits, per part and per month) ---------- */
+const Usage = {
+  key: 'kikitori.usage',
+  month: () => new Date().toISOString().slice(0, 7),
+  all() { return LS.get(this.key, {}); },
+  add(rec, sink) {
+    const k = rec.kind === 'stt' ? 'stt:' + rec.model : rec.kind === 'captions' ? 'supadata' : rec.model;
+    const bump = t => { const r = t[k] ||= { calls: 0, in: 0, out: 0, audio: 0, seconds: 0, credits: 0 }; r.calls++; r.in += rec.in || 0; r.out += rec.out || 0; r.audio += rec.audio || 0; r.seconds += rec.seconds || 0; r.credits += rec.credits || 0; };
+    const all = this.all(); bump(all[this.month()] ||= {}); LS.set(this.key, all);
+    if (sink) bump(sink);
+  },
+};
+function usageCost(k, r) {
+  if (k === 'supadata') return 0;
+  if (k.startsWith('stt:')) { const p = PRICE.stt[k.slice(4)]; return p == null ? null : p * Math.max(r.seconds, 10 * r.calls) / 3600; }
+  const p = PRICE.llm[k] || PRICE.llm[k.replace(/^(google|openai)\//, '')]; if (!p) return null;
+  const ap = PRICE.geminiAudio[k] ?? p[0];
+  return ((r.in - r.audio) * p[0] + r.audio * ap + r.out * p[1]) / 1e6;
+}
+const fmtTok = n => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'K' : String(n);
+const fmtUsd = v => v == null ? 'unknown price' : v < 0.01 ? '<$0.01' : '$' + v.toFixed(2);
+function usageRows(u) {
+  return Object.entries(u || {}).map(([k, r]) => {
+    const cost = usageCost(k, r);
+    const what = k === 'supadata' ? `Supadata captions: ${r.credits} credit${r.credits === 1 ? '' : 's'}`
+      : k.startsWith('stt:') ? `Groq/Whisper ${k.slice(4)}: ${Math.round(r.seconds / 60)} min of audio, ${r.calls} request${r.calls === 1 ? '' : 's'}`
+      : `${k}: ${r.calls} request${r.calls === 1 ? '' : 's'}, ${fmtTok(r.in)} tokens in${r.audio ? ` (${fmtTok(r.audio)} audio)` : ''}, ${fmtTok(r.out)} out`;
+    return { k, what, cost };
+  });
+}
+
 /* ---------- HTTP ---------- */
 async function apiFetch(url, opts = {}, { label = 'Request', retries = 2, timeout = 240000 } = {}) {
   for (let attempt = 0; ; attempt++) {
@@ -709,7 +825,7 @@ function sttCfg() {
   return { base: (S.sttBase || p.base).replace(/\/$/, ''), keyName: p.key, model: S.sttModel || p.def };
 }
 const HALLUCINATIONS = /ご視聴ありがとうございました|チャンネル登録|お疲れ様でした。$|字幕|次回もお楽しみに/;
-async function sttTranscribe(blob, name, prompt) {
+async function sttTranscribe(blob, name, prompt, usage) {
   const cfg = sttCfg();
   if (!cfg.base) throw new UserError('Set a base URL for the custom speech-to-text provider in Settings.', 'settings');
   const key = await needKey(cfg.keyName);
@@ -724,6 +840,7 @@ async function sttTranscribe(blob, name, prompt) {
   if (prompt) fd.append('prompt', prompt.slice(-160));
   const r = await apiFetch(cfg.base + '/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + key }, body: fd }, { label: 'Speech-to-text', retries: 3, timeout: 600000 });
   const j = await r.json();
+  Usage.add({ kind: 'stt', model: cfg.model, seconds: +j.duration || 0 }, usage);
   const segs = (j.segments || []).filter(sg => {
     const t = (sg.text || '').trim(); if (!t) return false;
     if ((sg.compression_ratio || 0) > 2.6) return false;
@@ -747,7 +864,7 @@ function geminiThinking(model) {
   if (/gemini-[3-9]/.test(model)) return { thinkingLevel: 'minimal' };
   return null;
 }
-async function geminiCallOnce({ model, system, parts, schema, base, maxTokens = 32000, temperature = 0.2, extraGen = {} }) {
+async function geminiCallOnce({ model, system, parts, schema, base, maxTokens = 32000, temperature = 0.2, extraGen = {}, usage }) {
   const key = await needKey('gemini');
   base = (base || PROVIDERS.llm.gemini.base).replace(/\/$/, '');
   let useSchema = !!schema, thinking = geminiThinking(model); extraGen = { ...extraGen };
@@ -764,6 +881,8 @@ async function geminiCallOnce({ model, system, parts, schema, base, maxTokens = 
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body),
       }, { label: `Gemini (${model})`, retries: 2, timeout: 300000 });
       const j = await r.json();
+      const um = j.usageMetadata || {};
+      Usage.add({ kind: 'llm', model, in: um.promptTokenCount || 0, out: (um.candidatesTokenCount || 0) + (um.thoughtsTokenCount || 0), audio: (um.promptTokensDetails || []).filter(d => d.modality === 'AUDIO').reduce((n, d) => n + (d.tokenCount || 0), 0) }, usage);
       if (j.promptFeedback?.blockReason) throw new ApiError('Gemini blocked the request: ' + j.promptFeedback.blockReason);
       const cand = j.candidates?.[0];
       const text = (cand?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
@@ -801,7 +920,7 @@ async function geminiCall(opts) {
     }
   }
 }
-async function openaiChatJSON({ system, user, maxTokens }) {
+async function openaiChatJSON({ system, user, maxTokens, usage }) {
   const cfg = llmCfg();
   if (!cfg.base) throw new UserError('Set a base URL for the custom provider in Settings.', 'settings');
   const key = await needKey(cfg.keyName);
@@ -816,6 +935,7 @@ async function openaiChatJSON({ system, user, maxTokens }) {
     try {
       const r = await apiFetch(cfg.base + '/chat/completions', { method: 'POST', headers, body: JSON.stringify(body) }, { label: 'Translation model', retries: 3, timeout: 300000 });
       const j = await r.json();
+      Usage.add({ kind: 'llm', model: cfg.model, in: j.usage?.prompt_tokens || 0, out: j.usage?.completion_tokens || 0 }, usage);
       const ch = j.choices?.[0];
       if (ch?.finish_reason === 'length') { const e = new Error('truncated'); e.truncated = true; throw e; }
       return { json: parseJSONLoose(ch?.message?.content || ''), usage: j.usage };
@@ -826,26 +946,34 @@ async function openaiChatJSON({ system, user, maxTokens }) {
     }
   }
 }
-async function llmJSON({ system, user, schema, maxTokens }) {
+async function llmJSON({ system, user, schema, maxTokens, usage }) {
   const cfg = llmCfg();
-  if (cfg.provider === 'gemini') return geminiCall({ model: cfg.model, base: S.llmBase, system, parts: [{ text: user }], schema, maxTokens });
-  return openaiChatJSON({ system, user, maxTokens });
+  if (cfg.provider === 'gemini') return geminiCall({ model: cfg.model, base: S.llmBase, system, parts: [{ text: user }], schema, maxTokens, usage });
+  return openaiChatJSON({ system, user, maxTokens, usage });
 }
 
 /* ---------- prompts ---------- */
-const ANNOT_SYSTEM = level => `You turn raw Japanese transcript cues into study material for an English-speaking learner at level ${level}.
+const ANNOT_SYSTEM = level => `You turn Japanese transcript cues into study material for an English-speaking learner at level ${level}. The learner reads each line while listening and shadows it, so the Japanese must match the audio exactly.
 
-Input: numbered cues from speech recognition or captions. Cues may break mid-sentence, lack punctuation, or contain recognition errors.
+Input: numbered cues from speech recognition or captions. A cue may be a whole sentence, part of one, or several sentences. Punctuation may be missing.
 
 Return JSON: {"s":[{"c":[first,last],"f":"…","e":"…","v":[{"w":"…","r":"…","m":"…"}]}]}
 
-Rules
-- Group the cues into natural sentences, in order. "c" is the inclusive range of cue numbers the sentence comes from. Every cue belongs to some sentence. Consecutive sentences may share a cue when a sentence ends inside it. Split long run-on speech at natural clause breaks (aim for at most about 60 characters per sentence).
-- "f": the sentence as natural written Japanese with punctuation, faithful to what was said. Give every word that contains kanji furigana in the form {漢字|かんじ}: braces wrap only the kanji, the reading is in hiragana, and okurigana stays outside, e.g. {食|た}べる, {勉強|べんきょう}する, {今日|きょう}, {一人|ひとり}, {大人|おとな}しい. Never put braces around kana-only text. Choose the reading that fits this context.
-- Fix obvious recognition errors only when the intended words are clear from context. Drop pure noise like [音楽].
-- "e": a natural, accurate English translation of the sentence.
-- "v": up to 3 words or expressions from this sentence worth learning at ${level}; skip basic vocabulary. "w" is the dictionary form, "r" its reading in hiragana, "m" a short English meaning that fits this context. Use [] when nothing qualifies.
-- Output only the JSON.`;
+Lines
+- Keep lines short like subtitles: one spoken sentence per item, about 40 characters at most. Split a longer sentence at a natural pause (after けど, から, て, し, が and similar).
+- Never merge two sentences into one item. Only combine cues when a cue is an unfinished fragment of the same sentence. Short interjections such as はい。 or ね。 stay as their own line or attach to the neighbouring line; they are never dropped.
+- "c" is the inclusive range of cue numbers the item comes from, in order. Every cue must be covered. Consecutive items may share a cue when one cue holds more than one sentence.
+
+Japanese text ("f"): word for word
+- Write exactly what was said: keep every filler and interjection (あの, えっと, ええと, まあ, ね, なんか, はい), every repetition, casual contractions and unfinished phrasing. Do not paraphrase, shorten, tidy, summarise or correct grammar. Do not swap words for synonyms.
+- You may add punctuation, and you may fix a word only when it is clearly a speech-recognition mistake. Leave out only non-speech markers such as [音楽].
+- Furigana: write each word that contains kanji as {漢字|かんじ}. Braces wrap only the kanji, the reading is hiragana, okurigana stays outside: {食|た}べる, {勉強|べんきょう}する, {今日|きょう}, {一人|ひとり}. Never put braces around hiragana or katakana, and never write braces without a reading.
+
+English ("e"): a natural, faithful translation of that line. Fillers may be left out in English.
+
+Vocabulary ("v"): up to 3 words or expressions from the line worth learning at ${level}; skip basic words. "w" dictionary form, "r" reading in hiragana, "m" short English meaning in this context. Use [] when nothing qualifies.
+
+Output only the JSON.`;
 const ANNOT_SCHEMA = {
   type: 'OBJECT', required: ['s'],
   properties: { s: { type: 'ARRAY', items: { type: 'OBJECT', required: ['c', 'f', 'e', 'v'], properties: {
@@ -890,11 +1018,12 @@ function tidyCues(cues) {
   }
   return cues;
 }
-async function supadataCaptions(videoId) {
+async function supadataCaptions(videoId, usage) {
   const key = await needKey('supadata');
   const url = `https://api.supadata.ai/v1/transcript?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}&lang=ja&mode=native`;
   const headers = { 'x-api-key': key };
   let r = await apiFetch(url, { headers }, { label: 'Supadata', retries: 2 });
+  Usage.add({ kind: 'captions', credits: 1 }, usage);
   if (r.status === 206) throw new UserError('This video has no captions on YouTube.');
   let j = await r.json();
   if (r.status === 202 && j.jobId) {
@@ -912,7 +1041,7 @@ async function supadataCaptions(videoId) {
   if (lang && !lang.startsWith('ja')) { const e = new UserError(`No Japanese captions (found: ${[lang, ...(j.availableLangs || [])].filter((v, i, a) => a.indexOf(v) === i).join(', ')}).`); e.noJa = true; throw e; }
   return tidyCues(j.content.map(c => ({ s: (+c.offset || 0) / 1000, e: ((+c.offset || 0) + (+c.duration || 0)) / 1000, t: c.text })));
 }
-async function geminiYouTube(ep, s, e, prog) {
+async function geminiYouTube(ep, s, e, prog, usage) {
   const model = S.ytGeminiModel || 'gemini-3.1-flash-lite';
   const out = []; let from = s;
   for (let round = 0; round < 5 && from < e - 15; round++) {
@@ -924,7 +1053,7 @@ Return JSON {"segments":[{"s":start,"e":end,"t":"text"}]} where s and e are seco
 One segment per sentence or short phrase, at most about 12 seconds each, in order. Use natural Japanese punctuation. Do not translate. No speaker labels, no descriptions of music or sounds.` },
     ];
     let res;
-    const call = () => geminiCall({ model, parts, schema: YT_SCHEMA, maxTokens: 60000, temperature: 0, extraGen: { mediaResolution: 'MEDIA_RESOLUTION_LOW' } });
+    const call = () => geminiCall({ model, parts, schema: YT_SCHEMA, maxTokens: 60000, temperature: 0, extraGen: { mediaResolution: 'MEDIA_RESOLUTION_LOW' }, usage });
     try { res = await call(); }
     catch (err) {
       if (err.status === 400 && /fps|video_?metadata/i.test(err.message) && parts[0].videoMetadata.fps) { delete parts[0].videoMetadata.fps; res = await call(); }
@@ -1291,7 +1420,7 @@ async function saveEpisode(ep, { bump = true, folder = true } = {}) {
   if (bump) ep.updatedAt = Date.now();
   Cache.set(ep.id, ep);
   await DB.put('episodes', JSON.parse(JSON.stringify(ep)));
-  if (folder) Folder.queue(ep);
+  if (folder) { Folder.queue(ep); Cloud.queue(ep, bump ? 4000 : 10000); }
 }
 function chunkScore(c) { return !c ? -1 : c.status === 'ready' ? 3 : c.sentences?.length ? 2 : c.cues?.length ? 1 : 0; }
 function mergeEpisodes(a, b) {
@@ -1320,8 +1449,40 @@ function mergeEpisodes(a, b) {
 async function deleteEpisode(id) {
   Cache.delete(id); await DB.del('episodes', id); await DB.del('blobs', id).catch(() => {});
   Cut.mp3Idx.delete(id); Cut.sources.delete(id);
-  await Folder.remove(id);
-  if (App.ep?.id === id) closeEpisode();
+  await Folder.remove(id); Cloud.remove(id);
+  if (App.ep?.id === id) closeEpisode({ save: false });
+}
+
+/* ---------- library folders (labels on episodes; list synced as metadata) ---------- */
+const Folders = {
+  list: [],
+  async load() { this.list = (await DB.get('kv', 'folders').catch(() => null)) || []; },
+  async save() { await DB.put('kv', JSON.parse(JSON.stringify(this.list)), 'folders').catch(() => {}); this.at = Date.now(); Folder.queueFolders(); Cloud.queueFolders(); },
+  live() { return this.list.filter(f => !f.deleted).sort((a, b) => a.name.localeCompare(b.name, 'ja')); },
+  name(id) { return this.list.find(f => f.id === id && !f.deleted)?.name || ''; },
+  async create(name) { const f = { id: 'f_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, at: Date.now() }; this.list.push(f); await this.save(); return f; },
+  async rename(id, name) { const f = this.list.find(x => x.id === id); if (!f) return; f.name = name; f.at = Date.now(); await this.save(); },
+  async remove(id) {
+    const f = this.list.find(x => x.id === id); if (!f) return; f.deleted = true; f.at = Date.now(); await this.save();
+    for (const e of await DB.all('episodes')) if (e.folder === id) { const ep = Cache.get(e.id) || e; ep.folder = null; await saveEpisode(ep); }
+  },
+  merge(remote) {
+    let changed = false;
+    for (const r of remote || []) { if (!r?.id) continue; const l = this.list.find(x => x.id === r.id); if (!l) { this.list.push({ ...r }); changed = true; } else if ((r.at || 0) > (l.at || 0)) { Object.assign(l, r); changed = true; } }
+    return changed;
+  },
+  json() { return JSON.stringify({ folders: this.list }); },
+};
+async function moveToFolder(id, folderId) {
+  const ep = await getEpisode(id); if (!ep) return;
+  ep.folder = folderId || null; await saveEpisode(ep);
+  if (!App.ep) renderHome();
+  toast(folderId ? `Moved to "${Folders.name(folderId)}".` : 'Removed from its folder.');
+}
+async function askNewFolder() {
+  const name = prompt('Folder name'); if (!name?.trim()) return null;
+  const existing = Folders.live().find(f => f.name === name.trim());
+  return existing || await Folders.create(name.trim());
 }
 
 /* ---------- folder sync (File System Access API) ---------- */
@@ -1340,7 +1501,7 @@ const Folder = {
   async connect() {
     const h = await window.showDirectoryPicker({ id: 'kikitori-library', mode: 'readwrite', startIn: 'documents' });
     this.handle = h; await DB.put('kv', h, 'dir'); this.status = 'ready'; this.names.clear();
-    await this.sync(); toast(`Library folder connected: ${h.name}`);
+    await this.sync(); renderFolderState(); if (!App.ep) renderHome(); toast(`Library folder connected: ${h.name}`);
   },
   async reconnect() {
     if (!this.handle) return this.connect();
@@ -1353,6 +1514,7 @@ const Folder = {
   idOf(name) { const m = name.match(/\.((?:yt|au)_[A-Za-z0-9_-]+)\.kikitori\.json$/); return m ? m[1] : null; },
   async writeText(name, text, dir = this.handle) { const fh = await dir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(text); await w.close(); },
   async readTomb() { try { const f = await (await this.handle.getFileHandle('_deleted.kikitori-meta.json')).getFile(); return JSON.parse(await f.text()); } catch { return {}; } },
+  queueFolders() { if (this.status !== 'ready') return; clearTimeout(this.fTimer); this.fTimer = setTimeout(() => this.writeText('_folders.kikitori-meta.json', Folders.json()).catch(e => this.fail(e)), 1500); },
   queue(ep) {
     if (this.status !== 'ready') return;
     clearTimeout(this.timers.get(ep.id));
@@ -1360,7 +1522,7 @@ const Folder = {
   },
   fail(e) {
     console.warn('Folder write failed', e);
-    if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError') { this.status = 'need-permission'; renderFolderState(); toast('Lost access to the library folder. Reconnect it in Library.', { err: true, action: openLibrary, label: 'Library' }); }
+    if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError') { this.status = 'need-permission'; renderFolderState(); toast('Lost access to the library folder. Reconnect it in Sync & backup.', { err: true, action: openSync, label: 'Sync & backup' }); }
   },
   async write(ep) {
     if (this.status !== 'ready') return;
@@ -1398,6 +1560,8 @@ const Folder = {
     this.syncing = true;
     try {
       const tomb = await this.readTomb();
+      try { const ff = await (await this.handle.getFileHandle('_folders.kikitori-meta.json')).getFile(); if (Folders.merge(JSON.parse(await ff.text()).folders)) await DB.put('kv', JSON.parse(JSON.stringify(Folders.list)), 'folders'); } catch {}
+      await this.writeText('_folders.kikitori-meta.json', Folders.json()).catch(() => {});
       const remote = new Map();
       for await (const [name, h] of this.handle.entries()) {
         if (h.kind !== 'file') continue; const id = this.idOf(name); if (!id) continue;
@@ -1407,7 +1571,7 @@ const Folder = {
       let changed = false;
       for (const [id, at] of Object.entries(tomb)) {
         const l = localMap.get(id);
-        if (l && (l.updatedAt || 0) <= at) { Cache.delete(id); await DB.del('episodes', id); await DB.del('blobs', id).catch(() => {}); localMap.delete(id); changed = true; if (App.ep?.id === id) closeEpisode(); }
+        if (l && (l.updatedAt || 0) <= at) { Cache.delete(id); await DB.del('episodes', id); await DB.del('blobs', id).catch(() => {}); localMap.delete(id); changed = true; if (App.ep?.id === id) closeEpisode({ save: false }); }
       }
       for (const [id, r] of remote) {
         if (tomb[id] && (r.updatedAt || 0) <= tomb[id]) { const nm = this.names.get(id); if (nm) await this.handle.removeEntry(nm).catch(() => {}); this.names.delete(id); continue; }
@@ -1426,11 +1590,182 @@ const Folder = {
         if (!r || (l.updatedAt || 0) > (r.updatedAt || 0) || (l.posAt || 0) > (r.posAt || 0)) await this.write(Cache.get(l.id) || l);
       }
       this.lastSync = Date.now();
-      if (changed) { renderRecent(); if ($('#libraryDlg').open) renderLibrary(); }
+      if (changed && !App.ep) renderHome();
     } catch (e) { this.fail(e); throw e; }
     finally { this.syncing = false; renderFolderState(); }
   },
 };
+
+/* ---------- sync across devices via a private GitHub repo (Contents API) ---------- */
+function b64utf8(str) { const bytes = new TextEncoder().encode(str); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin); }
+const Cloud = {
+  status: 'none', lastSync: 0, syncing: false, timers: new Map(), state: null, err: '',
+  configured() { return !!S.ghRepo && (Keys.locked || !!Keys.get('github')); },
+  async loadState() { this.state = (await DB.get('kv', 'cloud').catch(() => null)) || { shas: {}, seen: {} }; },
+  async saveState() { await DB.put('kv', this.state, 'cloud').catch(() => {}); },
+  async req(path, opts = {}, accept = 'application/vnd.github+json') {
+    const token = this.trial?.token || await needKey('github');
+    const url = `https://api.github.com/repos/${this.trial?.repo || S.ghRepo}/${path}`;
+    let r;
+    try { r = await fetch(url, { cache: 'no-store', ...opts, headers: { Authorization: 'Bearer ' + token, Accept: accept, 'X-GitHub-Api-Version': '2022-11-28', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) } }); }
+    catch { throw new ApiError('Couldn\'t reach GitHub. Check your connection.'); }
+    if (r.status === 401) throw new ApiError('GitHub rejected the sync token. Create a new one and paste it in Sync & backup.', 401);
+    return r;
+  },
+  enc: p => p.split('/').map(encodeURIComponent).join('/'),
+  async list(dir) { const r = await this.req(`contents/${dir}`); if (r.status === 404) return []; if (!r.ok) throw new ApiError(`GitHub listing failed (${r.status}).`, r.status); const j = await r.json(); return Array.isArray(j) ? j : []; },
+  async getText(path) { const r = await this.req(`contents/${this.enc(path)}`, {}, 'application/vnd.github.raw+json'); if (r.status === 404) return null; if (!r.ok) throw new ApiError(`GitHub read failed (${r.status}).`, r.status); return r.text(); },
+  chain: Promise.resolve(),
+  serial(fn) { const run = this.chain.then(fn, fn); this.chain = run.catch(() => {}); return run; },
+  // Writes go one at a time (parallel commits to one branch conflict). If the file changed on another
+  // device since we last saw it, `remerge` gets the remote text and returns what to write instead.
+  put(path, text, message, remerge) { return this.serial(() => this.putNow(path, text, message, remerge)); },
+  async putNow(path, text, message, remerge) {
+    const body = { message, content: b64utf8(text) }; const sha = this.state.shas[path]; if (sha) body.sha = sha;
+    let r = await this.req(`contents/${this.enc(path)}`, { method: 'PUT', body: JSON.stringify(body) });
+    for (let attempt = 0; (r.status === 409 || r.status === 422) && attempt < 3; attempt++) {
+      await sleep(400 * (attempt + 1));
+      const cur = await this.req(`contents/${this.enc(path)}`);
+      if (cur.ok) {
+        body.sha = (await cur.json()).sha;
+        if (remerge) { const remote = await this.getText(path); if (remote != null) body.content = b64utf8(await remerge(remote)); }
+      } else delete body.sha;
+      r = await this.req(`contents/${this.enc(path)}`, { method: 'PUT', body: JSON.stringify(body) });
+    }
+    if (!r.ok) throw new ApiError(`GitHub write failed (${r.status}).`, r.status);
+    const j = await r.json(); this.state.shas[path] = j.content?.sha; return j;
+  },
+  del(path, message) { return this.serial(() => this.delNow(path, message)); },
+  async delNow(path, message) {
+    let sha = this.state.shas[path];
+    if (!sha) { const cur = await this.req(`contents/${this.enc(path)}`); if (!cur.ok) return; sha = (await cur.json()).sha; }
+    const r = await this.req(`contents/${this.enc(path)}`, { method: 'DELETE', body: JSON.stringify({ message, sha }) });
+    if (r.ok || r.status === 404) delete this.state.shas[path];
+  },
+  async connect(repo, token) {
+    if (Keys.locked) await promptUnlock('Unlock your API keys to connect sync.');
+    repo = String(repo || '').trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '');
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new UserError('Enter the repo as owner/name, for example jorddam/kikitori-library.');
+    token = String(token || '').trim() || Keys.get('github');
+    if (!token) throw new UserError('Paste the GitHub token you created for this repo.');
+    // Check the repo and token before saving anything.
+    this.trial = { repo, token };
+    try {
+      const r = await this.req('');
+      if (r.status === 404) throw new UserError(`GitHub can't find ${repo} with this token. Check the name, and that the token was given access to that repo.`);
+      if (!r.ok) throw new ApiError(`GitHub said ${r.status}.`, r.status);
+      const info = await r.json();
+      if (info.permissions && info.permissions.push === false) throw new UserError('This token can read the repo but not write to it. Give it "Contents: Read and write" access.');
+      if (info.private === false && !confirm(`${repo} is public, so anyone could read your library there. Use it anyway?`)) return;
+    } finally { this.trial = null; }
+    await Keys.save({ ...(Keys.mem || {}), github: token });
+    S.ghRepo = repo; saveSettings();
+    this.state = { shas: {}, seen: {} }; await this.saveState();
+    this.status = 'ready'; await this.sync(); toast(`Library syncing with ${repo}.`);
+  },
+  async disconnect() { S.ghRepo = ''; saveSettings(); this.status = 'none'; this.state = { shas: {}, seen: {} }; await this.saveState(); renderCloudState(); updateLibWhere(); },
+  async init() { await this.loadState(); if (!S.ghRepo) { this.status = 'none'; return; } this.status = 'ready'; if (!Keys.locked) this.sync().catch(e => this.fail(e)); },
+  fail(e) { console.warn('Cloud sync', e); this.err = e.message; if (e.status === 401) this.status = 'error'; renderCloudState(); updateLibWhere(); },
+  queue(ep, delay = 4000) {
+    if (this.status !== 'ready' || Keys.locked) return;
+    clearTimeout(this.timers.get(ep.id));
+    this.timers.set(ep.id, setTimeout(() => { this.timers.delete(ep.id); this.pushOne(Cache.get(ep.id) || ep).catch(e => this.fail(e)); }, delay));
+  },
+  queueFolders() { if (this.status !== 'ready' || Keys.locked) return; clearTimeout(this.fTimer); this.fTimer = setTimeout(() => this.put('_folders.json', Folders.json(), 'Update folders', t => { try { Folders.merge(JSON.parse(t).folders); } catch {} return Folders.json(); }).then(() => this.saveState()).catch(e => this.fail(e)), 2000); },
+  async flush() { const ids = [...this.timers.keys()]; ids.forEach(id => clearTimeout(this.timers.get(id))); this.timers.clear(); for (const id of ids) { const ep = Cache.get(id); if (ep) await this.pushOne(ep).catch(e => this.fail(e)); } },
+  async pushOne(ep) {
+    if (this.status !== 'ready') return;
+    const path = `episodes/${ep.id}.json`; let sent = ep;
+    await this.put(path, JSON.stringify(stripForExport(ep)), `${ep.kind === 'youtube' ? 'Video' : 'Audio'}: ${(ep.title || ep.id).slice(0, 60)}`, async remoteText => {
+      let r; try { r = JSON.parse(remoteText); } catch { return JSON.stringify(stripForExport(ep)); }
+      sent = mergeEpisodes(ep, r);
+      const live = Cache.get(ep.id);
+      if (live && ![...App.jobs.keys()].some(k => k.startsWith(ep.id + ':'))) { Object.keys(live).forEach(k => delete live[k]); Object.assign(live, sent); await DB.put('episodes', JSON.parse(JSON.stringify(live))); if (App.ep === live) renderAll(); }
+      return JSON.stringify(stripForExport(sent));
+    });
+    this.state.seen[ep.id] = { u: sent.updatedAt || 0, p: sent.posAt || 0 }; await this.saveState();
+    this.lastSync = Date.now();
+  },
+  async remove(id) {
+    if (this.status !== 'ready') return;
+    try {
+      const tombText = await this.getText('_deleted.json'); const tomb = tombText ? JSON.parse(tombText) : {};
+      tomb[id] = Date.now();
+      await this.put('_deleted.json', JSON.stringify(tomb), 'Delete episode', t => { const cur = JSON.parse(t || '{}'); cur[id] = tomb[id]; return JSON.stringify(cur); });
+      await this.del(`episodes/${id}.json`, 'Delete episode'); delete this.state.seen[id]; await this.saveState();
+    } catch (e) { this.fail(e); }
+  },
+  async sync() {
+    if (this.status !== 'ready' || this.syncing) return;
+    if (Keys.locked) return;
+    this.syncing = true; this.err = ''; renderCloudState();
+    try {
+      // folders
+      const ft = await this.getText('_folders.json');
+      if (ft && Folders.merge(JSON.parse(ft).folders)) await DB.put('kv', JSON.parse(JSON.stringify(Folders.list)), 'folders');
+      if (Folders.list.length && (!ft || ft !== Folders.json())) await this.put('_folders.json', Folders.json(), 'Update folders', t => { try { Folders.merge(JSON.parse(t).folders); } catch {} return Folders.json(); });
+      // deletions made on other devices
+      const tt = await this.getText('_deleted.json'); const tomb = tt ? JSON.parse(tt) : {};
+      const locals = await DB.all('episodes'); const localMap = new Map(locals.map(e => [e.id, Cache.get(e.id) || e]));
+      let changed = false;
+      for (const [id, at] of Object.entries(tomb)) {
+        const l = localMap.get(id);
+        if (l && (l.updatedAt || 0) <= at) { Cache.delete(id); await DB.del('episodes', id); await DB.del('blobs', id).catch(() => {}); localMap.delete(id); changed = true; if (App.ep?.id === id) closeEpisode({ save: false }); }
+      }
+      // pull what changed remotely
+      const files = (await this.list('episodes')).filter(f => f.type === 'file' && /^(yt|au)_[\w-]+\.json$/.test(f.name));
+      const remoteIds = new Set();
+      for (const f of files) {
+        const id = f.name.slice(0, -5); remoteIds.add(id);
+        if (this.state.shas[f.path] === f.sha) continue;
+        const text = await this.getText(f.path); if (!text) continue;
+        let r; try { r = JSON.parse(text); } catch { continue; }
+        this.state.shas[f.path] = f.sha; this.state.seen[id] = { u: r.updatedAt || 0, p: r.posAt || 0 };
+        if (tomb[id] && (r.updatedAt || 0) <= tomb[id]) continue;
+        const l = localMap.get(id);
+        if (l && (r.updatedAt || 0) <= (l.updatedAt || 0) && (r.posAt || 0) <= (l.posAt || 0)) continue;
+        const busy = [...App.jobs.keys()].some(k => k.startsWith(id + ':'));
+        const m = mergeEpisodes(l, r);
+        if (busy && l) { Object.assign(l, { title: m.title, folder: m.folder, pos: m.pos, posAt: m.posAt }); continue; }
+        if (l && Cache.get(id) === l) { Object.keys(l).forEach(k => delete l[k]); Object.assign(l, m); } else Cache.set(id, m);
+        await DB.put('episodes', JSON.parse(JSON.stringify(m))); localMap.set(id, Cache.get(id)); changed = true;
+        if (App.ep?.id === id) { App.ep = Cache.get(id); renderAll(); }
+      }
+      // push what's newer here
+      for (const l of localMap.values()) {
+        const seen = this.state.seen[l.id];
+        if (!remoteIds.has(l.id) || !seen || (l.updatedAt || 0) > seen.u || (l.posAt || 0) > seen.p + 1000) await this.pushOne(l);
+      }
+      await this.saveState();
+      this.lastSync = Date.now();
+      if (changed && !App.ep) renderHome();
+    } catch (e) { this.fail(e); throw e; }
+    finally { this.syncing = false; renderCloudState(); updateLibWhere(); }
+  },
+};
+function renderCloudState() {
+  const box = $('#cloudState'); if (!box) return; box.innerHTML = '';
+  const row = (...k) => el('div', { style: 'display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.3rem 0' }, ...k);
+  if (Cloud.status === 'error') box.append(el('p', { class: 'help status-bad', style: 'margin:0 0 .5rem' }, `Sync with ${S.ghRepo} stopped: ${Cloud.err || 'GitHub refused the token'} Paste a new token below to resume.`));
+  if (Cloud.status === 'ready') {
+    box.append(row(el('span', { class: 'status-ok' }, `Syncing with ${S.ghRepo}`),
+      el('span', { class: 'fineprint' }, Cloud.syncing ? 'syncing…' : Cloud.lastSync ? `last synced ${new Date(Cloud.lastSync).toLocaleTimeString()}` : ''),
+      el('button', { class: 'btn small', type: 'button', onclick: () => Cloud.sync().then(() => toast('Library synced.')).catch(showError) }, 'Sync now'),
+      el('button', { class: 'btn quiet small', type: 'button', onclick: () => { if (confirm('Stop syncing this device? Your library stays here and in the repo.')) Cloud.disconnect(); } }, 'Disconnect')));
+    if (Cloud.err) box.append(el('p', { class: 'help status-bad', style: 'margin:.2rem 0 0' }, Cloud.err));
+    box.append(el('p', { class: 'help', style: 'margin:.4rem 0 0' }, 'On each other device, open this app, choose Sync & backup, and connect the same repo with the same token. Audio files stay on the device you opened them on; YouTube episodes work everywhere.'));
+    return;
+  }
+  const repo = el('input', { type: 'text', placeholder: 'owner/kikitori-library', value: S.ghRepoDraft || S.ghRepo || '', spellcheck: 'false', 'aria-label': 'GitHub repo', style: 'flex:1;min-width:12rem;border:1px solid var(--line);border-radius:var(--r-s);background:var(--fog);padding:.42rem .6rem' });
+  const tok = el('input', { type: 'password', placeholder: 'github_pat_…', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'GitHub token', style: 'flex:1;min-width:12rem;border:1px solid var(--line);border-radius:var(--r-s);background:var(--fog);padding:.42rem .6rem;font-family:ui-monospace,Menlo,monospace;font-size:.85rem' });
+  box.append(el('p', { class: 'help', style: 'margin:0 0 .3rem' }, 'Keeps your library, transcripts, folders and positions in a private GitHub repo so every device (iPhone, iPad, other computers) shows the same library. One-time setup:'),
+    el('ol', { class: 'steps' },
+      el('li', {}, el('a', { href: 'https://github.com/new?name=kikitori-library&visibility=private', target: '_blank', rel: 'noopener' }, 'Create a private repo'), ' named kikitori-library (Private, nothing else needed).'),
+      el('li', {}, el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener' }, 'Create a fine-grained token'), ': Repository access › Only select repositories › kikitori-library; Permissions › Contents › Read and write.'),
+      el('li', {}, 'Paste both below and connect. Use the same token on your other devices.')),
+    row(repo), row(tok),
+    row(el('button', { class: 'btn primary', type: 'button', onclick: async e => { e.target.disabled = true; try { S.ghRepoDraft = repo.value; await Cloud.connect(repo.value, tok.value); } catch (err) { showError(err); } finally { e.target.disabled = false; renderCloudState(); updateLibWhere(); if (!App.ep) renderHome(); } } }, 'Connect')));
+}
 
 /* ---------- export / import ---------- */
 function stripForExport(ep) { const c = JSON.parse(JSON.stringify(ep)); c.chunks?.forEach(ch => { if (ch.status === 'working') ch.status = ch.sentences?.length ? 'partial' : 'none'; }); return c; }
@@ -1443,13 +1778,14 @@ async function deliverFile(name, text) {
 async function exportEpisode(ep) { await deliverFile(`${slug(ep.title)}.kikitori.json`, JSON.stringify(stripForExport(ep), null, 1)); }
 async function exportAll() {
   const eps = await DB.all('episodes');
-  await deliverFile(`kikitori-library-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ kikitori: 1, exportedAt: new Date().toISOString(), episodes: eps.map(e => stripForExport(Cache.get(e.id) || e)) }));
+  await deliverFile(`kikitori-library-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ kikitori: 1, exportedAt: new Date().toISOString(), folders: Folders.list, episodes: eps.map(e => stripForExport(Cache.get(e.id) || e)) }));
 }
 async function importFiles(files) {
   let n = 0;
   for (const f of files) {
     try {
       const j = JSON.parse(await f.text());
+      if (Array.isArray(j.folders) && Folders.merge(j.folders)) await Folders.save();
       const list = Array.isArray(j.episodes) ? j.episodes : (j.id && j.kind ? [j] : []);
       for (const r of list) {
         if (!/^(yt|au)_[A-Za-z0-9_-]+$/.test(r.id || '') || !Array.isArray(r.chunks)) continue;
@@ -1459,7 +1795,7 @@ async function importFiles(files) {
       }
     } catch (e) { showError(new UserError(`${f.name} isn't a Kikitori file.`)); }
   }
-  if (n) { toast(`Imported ${n} episode${n === 1 ? '' : 's'}.`); renderRecent(); if ($('#libraryDlg').open) renderLibrary(); if (App.ep) renderAll(); }
+  if (n) { toast(`Imported ${n} episode${n === 1 ? '' : 's'}.`); if (App.ep) renderAll(); else renderHome(); }
 }
 
 /* ---------- players ---------- */
@@ -1563,18 +1899,18 @@ async function getAudioBlob(ep) {
   if (!b && Folder.status === 'ready') { b = await Folder.readAudio(ep); if (b) await DB.put('blobs', b, ep.id).catch(() => {}); }
   return b || null;
 }
-async function cuesFor(ep, ch, prog) {
+async function cuesFor(ep, ch, prog, usage) {
   const inChunk = cues => cues.filter(c => { const mid = (c.s + c.e) / 2; return mid >= ch.start && (mid < ch.end || ch.i === ep.chunks.length - 1); });
   if (ep.source?.captions?.cues?.length) return inChunk(ep.source.captions.cues);
   const blob = (ep.kind === 'audio' || ep.hasAudio) ? await getAudioBlob(ep) : null;
   if (ep.kind === 'audio' && !blob) throw new UserError('The audio file for this episode isn\'t on this device. Use "Locate audio file" above the transcript.');
-  if (blob) return await sttChunk(ep, ch, blob, prog);
+  if (blob) return await sttChunk(ep, ch, blob, prog, usage);
   // YouTube
   const tryCaptions = S.ytSource === 'supadata' || (S.ytSource === 'auto' && hasKey('supadata'));
   if (tryCaptions) {
     try {
       prog('Fetching YouTube captions…');
-      const cues = await supadataCaptions(ep.ytId);
+      const cues = await supadataCaptions(ep.ytId, usage);
       ep.source = { ...(ep.source || {}), captions: { provider: 'supadata', at: Date.now(), cues } };
       if (!ep.duration && cues.length) { ep.duration = cues[cues.length - 1].e; buildChunks(ep); }
       await saveEpisode(ep);
@@ -1585,9 +1921,9 @@ async function cuesFor(ep, ch, prog) {
     }
   }
   if (!hasKey('gemini')) throw new UserError('To transcribe YouTube videos, add a Supadata key (uses existing captions) or a Gemini key in Settings. You can also import a subtitle file from the More menu.', 'settings');
-  return await geminiYouTube(ep, ch.start, ch.end, prog);
+  return await geminiYouTube(ep, ch.start, ch.end, prog, usage);
 }
-async function sttChunk(ep, ch, blob, prog) {
+async function sttChunk(ep, ch, blob, prog, usage) {
   prog('Preparing audio…');
   const pieces = await planPieces(ep, blob, ch.start, ch.end, prog);
   const cues = []; const base = `${slug(ep.title).slice(0, 40)}。句読点を付けて書き起こします。`;
@@ -1597,7 +1933,7 @@ async function sttChunk(ep, ch, blob, prog) {
     const made = await p.make(f => prog(`Preparing audio${tag} (${Math.round(f * 100)}%)…`, 0.05 + 0.25 * (j + f) / pieces.length));
     window.__kikitoriDebug?.pieces?.push({ s: p.s, e: p.e, size: made.blob.size, name: made.name, blob: made.blob });
     prog(`Transcribing${tag}…`, 0.05 + 0.3 * (j + 0.5) / pieces.length);
-    const r = await sttTranscribe(made.blob, made.name, base + tail);
+    const r = await sttTranscribe(made.blob, made.name, base + tail, usage);
     for (const sg of r.segments) {
       const c = { s: sg.s + p.s, e: sg.e + p.s, t: sg.t };
       const w = r.words.filter(x => x.s >= sg.s - 0.05 && x.s < sg.e + 0.05).map(x => ({ t: x.t, s: x.s + p.s, e: x.e + p.s }));
@@ -1613,7 +1949,7 @@ function tidyCuesKeepWords(cues) {
   for (let i = 0; i < cues.length; i++) { const n = cues[i + 1]; if (!(cues[i].e > cues[i].s)) cues[i].e = n ? n.s : cues[i].s + 2; }
   return cues.filter(c => c.t);
 }
-function makeBatches(cues, from, maxCues = 40, maxChars = 1000) {
+function makeBatches(cues, from, maxCues = 30, maxChars = 700) {
   const out = []; let i = from;
   while (i < cues.length) {
     let j = i, chars = 0;
@@ -1663,22 +1999,41 @@ function timeSentences(cues, raw) {
     if (k > 0 && o.s < out[k - 1].s) o.s = out[k - 1].s + 0.05;
     if (o.e < o.s + 0.3) o.e = o.s + 0.3;
   }
-  return out.map(o => ({ s: +o.s.toFixed(2), e: +o.e.toFixed(2), f: String(o.r.f || '').trim(), en: String(o.r.e || '').trim(), v: Array.isArray(o.r.v) ? o.r.v.filter(x => x && x.w).slice(0, 4).map(x => ({ w: String(x.w), r: String(x.r || ''), m: String(x.m || '') })) : [] }));
+  return out.map(o => ({ s: +o.s.toFixed(2), e: +o.e.toFixed(2), f: cleanFuri(o.r.f).trim(), en: String(o.r.e || '').trim(), v: Array.isArray(o.r.v) ? o.r.v.filter(x => x && x.w).slice(0, 4).map(x => ({ w: String(x.w), r: String(x.r || ''), m: String(x.m || '') })) : [] }));
 }
-async function annotateBatch(ep, cues, prevText) {
-  const user = `Episode: ${ep.title || 'untitled'}\n${prevText ? `Previous sentence (context only): ${prevText}\n` : ''}Cues:\n${cues.map((c, i) => `${i}| ${c.t}`).join('\n')}`;
-  const { json } = await llmJSON({ system: ANNOT_SYSTEM(S.level || 'N2 → N1'), user, schema: ANNOT_SCHEMA, maxTokens: 16000 });
-  const raw = Array.isArray(json.s) ? json.s : Array.isArray(json.sentences) ? json.sentences : [];
-  if (!raw.length) throw new Error('The model returned no sentences');
-  return timeSentences(cues, raw);
+/* Share of the spoken characters (from the cues) that survive in the annotated lines, in order. */
+function verbatimRatio(cues, items) {
+  const a = [...normJa(cues.map(c => c.t).join(''))], b = [...normJa(items.map(x => plainOf(x.f)).join(''))];
+  if (!a.length) return 1; if (!b.length) return 0;
+  let prev = new Uint16Array(b.length + 1), cur = new Uint16Array(b.length + 1);
+  for (let i = 1; i <= a.length; i++) { cur[0] = 0; for (let j = 1; j <= b.length; j++) cur[j] = a[i - 1] === b[j - 1] ? prev[j - 1] + 1 : Math.max(prev[j], cur[j - 1]); [prev, cur] = [cur, prev]; }
+  return prev[b.length] / a.length;
 }
-async function annotateRange(ep, cues, prevText, depth = 0) {
-  try { return await annotateBatch(ep, cues, prevText); }
+async function annotateBatch(ep, cues, prevText, usage) {
+  const user = `Episode: ${ep.title || 'untitled'}\n${prevText ? `Previous line (context only, do not repeat it): ${prevText}\n` : ''}Cues:\n${cues.map((c, i) => `${i}| ${c.t}`).join('\n')}`;
+  const ask = async extra => {
+    const { json } = await llmJSON({ system: ANNOT_SYSTEM(S.level || 'N2 → N1'), user: user + (extra || ''), schema: ANNOT_SCHEMA, maxTokens: 16000, usage });
+    const raw = Array.isArray(json.s) ? json.s : Array.isArray(json.sentences) ? json.sentences : [];
+    if (!raw.length) throw new Error('The model returned no sentences');
+    return raw;
+  };
+  let raw = await ask(), ratio = verbatimRatio(cues, raw);
+  if (ratio < 0.88) {
+    const again = await ask(`\n\nYour previous answer left out or reworded about ${Math.round((1 - ratio) * 100)}% of the spoken words. Write every cue word for word this time, including fillers like あの, まあ, ね and はい, and keep the lines short.`).catch(() => null);
+    const r2 = again ? verbatimRatio(cues, again) : 0;
+    if (r2 > ratio) { raw = again; ratio = r2; }
+  }
+  const out = timeSentences(cues, raw);
+  if (ratio < 0.8) out.forEach(x => { x.loose = true; });
+  return out;
+}
+async function annotateRange(ep, cues, prevText, usage, depth = 0) {
+  try { return await annotateBatch(ep, cues, prevText, usage); }
   catch (e) {
     if ((e.truncated || /JSON/.test(e.message)) && cues.length > 4 && depth < 3) {
       const mid = Math.ceil(cues.length / 2);
-      const a = await annotateRange(ep, cues.slice(0, mid), prevText, depth + 1);
-      const b = await annotateRange(ep, cues.slice(mid), plainOf(a[a.length - 1]?.f), depth + 1);
+      const a = await annotateRange(ep, cues.slice(0, mid), prevText, usage, depth + 1);
+      const b = await annotateRange(ep, cues.slice(mid), plainOf(a[a.length - 1]?.f), usage, depth + 1);
       return a.concat(b);
     }
     throw e;
@@ -1692,12 +2047,13 @@ async function processChunk(ep, i, { redoCues = false, redoAnnot = false } = {})
   App.jobs.set(key, true);
   const prog = (msg, frac) => setProgress(key, msg, frac);
   ch.status = 'working'; ch.err = null; renderRail(); renderChunkState();
+  const usage = ch.usage ||= {};
   try {
     if (redoCues) { delete ch.cues; ch.sentences = []; ch.next = 0; }
     if (redoAnnot) { ch.sentences = []; ch.next = 0; }
     if (!ch.cues?.length) {
       prog('Starting…', 0.02);
-      ch.cues = await cuesFor(ep, ch, prog);
+      ch.cues = await cuesFor(ep, ch, prog, usage);
       ch.sentences = []; ch.next = 0;
       await saveEpisode(ep);
     }
@@ -1723,7 +2079,7 @@ async function processChunk(ep, i, { redoCues = false, redoAnnot = false } = {})
         const bi = nextJob++; const [a, b] = batches[bi];
         const slice = ch.cues.slice(a, b);
         const prevText = a > 0 ? ch.cues[a - 1]?.t : '';
-        try { results[bi] = await annotateRange(ep, slice, prevText); }
+        try { results[bi] = await annotateRange(ep, slice, prevText, usage); }
         catch (e) {
           if (e instanceof UserError || e.status === 401 || e.status === 403 || e.status === 404) { stop = true; throw e; }
           console.warn('Batch failed', e); failed++; results[bi] = rawSentences(slice); ch.lastErr = e.message;
@@ -1736,7 +2092,7 @@ async function processChunk(ep, i, { redoCues = false, redoAnnot = false } = {})
     ch.sentences.forEach((s, k) => { s.id = `${i}.${k}`; });
     ch.status = failed ? 'partial' : 'ready';
     ch.err = failed ? `Translation failed for some lines: ${ch.lastErr || ''}` : null;
-    ch.meta = { at: Date.now(), src: transcriptPath(ep), stt: transcriptPath(ep) === 'stt' ? S.sttModel : undefined, llm: S.llmModel };
+    ch.meta = { at: Date.now(), src: transcriptPath(ep), stt: transcriptPath(ep) === 'stt' ? S.sttModel : undefined, llm: S.llmModel, ytModel: transcriptPath(ep) === 'gemini' ? S.ytGeminiModel : undefined };
     ch.cues = ch.cues.map(c => ({ s: c.s, e: c.e, t: c.t }));
     await saveEpisode(ep);
     if (failed) toast(ch.err, { err: true });
@@ -1764,7 +2120,7 @@ async function retryRaw(ep, i) {
       const cues = ch.sentences.slice(a, b).map(s => ({ s: s.s, e: s.e, t: s.f }));
       const res = [];
       for (const [x, y] of makeBatches(cues, 0)) {
-        try { res.push(...await annotateRange(ep, cues.slice(x, y), plainOf(ch.sentences[a - 1]?.f))); }
+        try { res.push(...await annotateRange(ep, cues.slice(x, y), plainOf(ch.sentences[a - 1]?.f), ch.usage ||= {})); }
         catch (e) { if (e instanceof UserError || e.status === 401 || e.status === 403) throw e; failed++; ch.lastErr = e.message; res.push(...rawSentences(cues.slice(x, y))); }
         done += y - x; setProgress(key, `Translating… ${done} of ${total} lines`, done / total);
       }
@@ -1783,7 +2139,7 @@ async function explainGrammar(sent, idx) {
   const { json } = await llmJSON({
     system: GRAMMAR_SYSTEM(S.level || 'N2 → N1'),
     user: `Sentence: ${plainOf(sent.f)}\nTranslation: ${sent.en || '(none)'}\nContext before: ${plainOf(sents[idx - 1]?.f) || '(none)'}\nContext after: ${plainOf(sents[idx + 1]?.f) || '(none)'}`,
-    schema: GRAMMAR_SCHEMA, maxTokens: 4000,
+    schema: GRAMMAR_SCHEMA, maxTokens: 4000, usage: curChunk() ? (curChunk().usage ||= {}) : null,
   });
   return { gist: String(json.gist || ''), parts: Array.isArray(json.parts) ? json.parts : [], points: Array.isArray(json.points) ? json.points : [], nuance: String(json.nuance || '') };
 }
@@ -1807,12 +2163,100 @@ function epMeta(ep) {
   const done = (ep.chunks || []).filter(c => c.status === 'ready').length, total = (ep.chunks || []).length;
   return [ep.duration ? fmt(ep.duration) : '', total ? `${done} of ${total} part${total === 1 ? '' : 's'} transcribed` : '', new Date(ep.updatedAt || ep.createdAt).toLocaleDateString()].filter(Boolean).join(' · ');
 }
-async function renderRecent() {
-  const eps = (await DB.all('episodes').catch(() => [])).map(e => Cache.get(e.id) || e).sort((a, b) => (b.posAt || b.updatedAt) - (a.posAt || a.updatedAt)).slice(0, 8);
-  $('#recentWrap').hidden = !eps.length;
-  const ul = $('#recentList'); ul.innerHTML = '';
-  for (const ep of eps) ul.append(el('li', {}, el('span', { class: 'kind' }, ep.kind === 'youtube' ? 'YouTube' : 'Audio'),
-    el('button', { class: 'ep-open', type: 'button', onclick: () => openEpisodeById(ep.id) }, el('span', { class: 'ep-title' }, ep.title || ep.id), el('span', { class: 'ep-meta' }, epMeta(ep)))));
+const LibUI = { kind: 'all', q: '', token: 0, folder: LS.get('kikitori.folderView', 'all') };
+const lastSeen = e => Math.max(e.openedAt || 0, e.posAt || 0) || e.createdAt || 0;
+function updateLibWhere() {
+  const w = $('#libWhere'); if (!w) return;
+  w.textContent = Cloud.status === 'ready' ? `Synced across your devices through ${S.ghRepo}${Cloud.lastSync ? `, last synced ${new Date(Cloud.lastSync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}.`
+    : Cloud.status === 'error' ? `Sync with ${S.ghRepo} stopped: ${Cloud.err || 'open Sync & backup'}`
+    : Folder.status === 'ready' ? `Saved in this browser and synced to the folder "${Folder.handle?.name}".`
+    : Folder.status === 'need-permission' ? `Saved in this browser. The sync folder "${Folder.handle?.name}" needs permission again.`
+    : 'Saved in this browser on this device only. Use Sync & backup to see it on your other devices.';
+}
+async function renderHome() {
+  const token = ++LibUI.token;
+  const raw = await DB.all('episodes').catch(() => []);
+  if (token !== LibUI.token) return;
+  const all = raw.map(e => Cache.get(e.id) || e).sort((a, b) => lastSeen(b) - lastSeen(a));
+  $('#intro').hidden = all.length > 0;
+  $('#libTools').hidden = all.length < 4;
+  updateLibWhere();
+  const live = Folders.live(), liveIds = new Set(live.map(f => f.id));
+  const inFolder = e => e.folder && liveIds.has(e.folder) ? e.folder : null;
+  if (LibUI.folder.startsWith('f_') && !liveIds.has(LibUI.folder)) LibUI.folder = 'all';
+  renderFolderBar(all, live, inFolder);
+  const q = LibUI.q.trim().toLowerCase();
+  const list = all.filter(e => (LibUI.kind === 'all' || e.kind === LibUI.kind) && (!q || (e.title || '').toLowerCase().includes(q))
+    && (LibUI.folder === 'all' || (LibUI.folder === 'none' ? !inFolder(e) : inFolder(e) === LibUI.folder)));
+  const grid = $('#libGrid'); grid.innerHTML = '';
+  if (!all.length) { grid.append(el('li', { class: 'lib-empty' }, 'Videos and audio files you open show up here with their transcripts, so you can come back to them any time.')); return; }
+  if (!list.length) { grid.append(el('li', { class: 'lib-empty' }, q ? `No titles match "${LibUI.q.trim()}".` : LibUI.folder.startsWith('f_') ? 'This folder is empty. Drag episodes onto its name, or use ⋯ › Move to on a card. New videos you load while this folder is open go into it.' : 'Nothing here yet.')); return; }
+  const frag = document.createDocumentFragment(); list.forEach(ep => frag.append(libCard(ep))); grid.append(frag);
+}
+function renderFolderBar(all, live, inFolder) {
+  const bar = $('#folderBar'); bar.innerHTML = '';
+  if (!all.length) return;
+  const count = id => id === 'all' ? all.length : id === 'none' ? all.filter(e => !inFolder(e)).length : all.filter(e => inFolder(e) === id).length;
+  const chip = (id, label) => {
+    const b = el('button', { type: 'button', class: 'fchip', 'aria-pressed': LibUI.folder === id ? 'true' : 'false', 'data-folder': id,
+      onclick: () => { LibUI.folder = id; LS.set('kikitori.folderView', id); renderHome(); } }, label, el('span', { class: 'n' }, String(count(id))));
+    if (id !== 'all') {
+      b.addEventListener('dragover', e => { e.preventDefault(); b.classList.add('drop'); });
+      b.addEventListener('dragleave', () => b.classList.remove('drop'));
+      b.addEventListener('drop', e => { e.preventDefault(); b.classList.remove('drop'); const epId = e.dataTransfer.getData('text/plain'); if (/^(yt|au)_/.test(epId)) moveToFolder(epId, id === 'none' ? null : id); });
+    }
+    return b;
+  };
+  bar.append(chip('all', 'All'));
+  for (const f of live) bar.append(chip(f.id, f.name));
+  if (live.length && (count('none') || LibUI.folder === 'none')) bar.append(chip('none', 'Not in a folder'));
+  bar.append(el('button', { type: 'button', class: 'fchip add', onclick: async () => { const f = await askNewFolder(); if (f) { LibUI.folder = f.id; LS.set('kikitori.folderView', f.id); renderHome(); } } }, '+ New folder'));
+  if (LibUI.folder.startsWith('f_')) {
+    const id = LibUI.folder;
+    bar.append(el('details', { class: 'menu' }, el('summary', { class: 'btn small quiet', 'aria-label': 'Folder options' }, '⋯'),
+      el('div', { class: 'menu-pop', style: 'left:0;right:auto' },
+        el('button', { type: 'button', onclick: async () => { const n = prompt('Rename folder', Folders.name(id)); if (n?.trim()) { await Folders.rename(id, n.trim()); renderHome(); } } }, 'Rename folder'),
+        el('button', { type: 'button', onclick: async () => { if (confirm(`Delete the folder "${Folders.name(id)}"? Its episodes stay in your library.`)) { await Folders.remove(id); LibUI.folder = 'all'; renderHome(); } } }, 'Delete folder'))));
+  }
+}
+function folderMenuItems(ep, after) {
+  const items = [el('div', { class: 'hd' }, 'Move to')];
+  for (const f of Folders.live()) items.push(el('button', { type: 'button', 'aria-current': ep.folder === f.id ? 'true' : 'false', onclick: async () => { await moveToFolder(ep.id, f.id); after?.(); } }, f.name));
+  if (ep.folder) items.push(el('button', { type: 'button', onclick: async () => { await moveToFolder(ep.id, null); after?.(); } }, 'No folder'));
+  items.push(el('button', { type: 'button', onclick: async () => { const f = await askNewFolder(); if (f) { await moveToFolder(ep.id, f.id); after?.(); } } }, 'New folder…'));
+  return items;
+}
+function libCard(ep) {
+  const chunks = ep.chunks || [], done = chunks.filter(c => c.status === 'ready').length;
+  const open = () => openEpisodeById(ep.id);
+  const thumb = el('div', { class: 'thumb' },
+    ep.kind === 'youtube' && ep.ytId ? el('img', { src: `https://i.ytimg.com/vi/${ep.ytId}/mqdefault.jpg`, alt: '', loading: 'lazy', decoding: 'async' })
+      : el('div', { class: 'audio-thumb', 'aria-hidden': 'true' }, el('span', { class: 'telop-text', lang: 'ja' }, '音')),
+    ep.duration ? el('span', { class: 'dur' }, fmt(ep.duration)) : null,
+    chunks.length ? el('div', { class: 'parts-bar', title: `${done} of ${chunks.length} part${chunks.length === 1 ? '' : 's'} transcribed` },
+      ...chunks.map(c => el('i', { class: c.status === 'ready' ? 'ready' : c.status === 'partial' ? 'partial' : '', style: `flex:${Math.max(1, Math.round(c.end - c.start))}` }))) : null,
+    ep.duration && ep.pos > 5 ? el('b', { class: 'pos', style: `left:${Math.min(100, ep.pos / ep.duration * 100).toFixed(2)}%` }) : null);
+  const status = !chunks.length ? 'Not transcribed yet' : done === chunks.length ? (chunks.length === 1 ? 'Transcribed' : `All ${chunks.length} parts transcribed`) : done ? `${done} of ${chunks.length} parts transcribed` : 'Not transcribed yet';
+  const resume = ep.pos > 5 ? `Stopped at ${fmt(ep.pos)}` : 'Not started';
+  const menu = el('details', { class: 'menu lib-menu' },
+    el('summary', { class: 'btn small quiet', 'aria-label': `Options for ${ep.title || 'this episode'}` }, '⋯'),
+    el('div', { class: 'menu-pop' },
+      ...folderMenuItems(ep),
+      el('div', { class: 'sep' }),
+      el('button', { type: 'button', onclick: () => exportEpisode(ep).catch(showError) }, 'Export transcript file (.json)'),
+      ep.kind === 'youtube' ? el('button', { type: 'button', onclick: () => window.open(`https://www.youtube.com/watch?v=${ep.ytId}`, '_blank', 'noopener') }, 'Open on YouTube') : null,
+      el('button', { type: 'button', onclick: async () => { if (confirm(`Delete "${ep.title}" and its transcripts${Folder.status === 'ready' ? ', including the copy in your sync folder' : ''}?`)) { await deleteEpisode(ep.id); renderHome(); } } }, 'Delete')));
+  const li = el('li', { class: 'lib-card', draggable: 'true' },
+    el('button', { class: 'lib-thumb-btn', type: 'button', tabindex: '-1', 'aria-hidden': 'true', onclick: open }, thumb),
+    el('div', { class: 'lib-row' },
+      el('button', { class: 'lib-text', type: 'button', onclick: open },
+        el('span', { class: 'lib-title', lang: 'ja' }, ep.title || ep.id),
+        el('span', { class: 'lib-meta' }, `${Folders.name(ep.folder) ? Folders.name(ep.folder) + ' · ' : ''}${ep.kind === 'youtube' ? 'YouTube' : 'Audio'}, ${status.charAt(0).toLowerCase() + status.slice(1)}`),
+        el('span', { class: 'lib-meta' }, resume)),
+      menu));
+  li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', ep.id); e.dataTransfer.effectAllowed = 'move'; li.classList.add('dragging'); });
+  li.addEventListener('dragend', () => li.classList.remove('dragging'));
+  return li;
 }
 function renderAll() {
   if (!App.ep) return;
@@ -1876,7 +2320,7 @@ function renderChunkState() {
   }
 }
 function lineNode(s, k) {
-  const li = el('li', { class: 'line' + (s.raw ? ' raw' : '') + (k === App.active ? ' on' : ''), 'data-k': k });
+  const li = el('li', { class: 'line' + (s.raw ? ' raw' : '') + (s.loose ? ' loose' : '') + (k === App.active ? ' on' : ''), 'data-k': k, title: s.loose ? 'This line may not match the audio word for word.' : null });
   li.append(el('button', { class: 't', type: 'button', 'data-act': 'seek', title: 'Play from here' }, fmt(s.s)));
   const body = el('div', { class: 'body', 'data-act': 'seek' });
   body.append(el('p', { class: 'jp ja', lang: 'ja', html: furiHtml(s.f) }));
@@ -1915,8 +2359,26 @@ function setActive(k) {
   const tj = $('#telopJa'), te = $('#telopEn'), tp = $('#telop');
   if (s) { tp.classList.remove('empty'); tj.innerHTML = furiHtml(s.f); te.textContent = s.en || ''; }
   else { tp.classList.add('empty'); tj.textContent = curChunk()?.sentences?.length ? '…' : (App.ep ? 'Press play' : ''); te.textContent = ''; }
+  fitTelop();
   if (li && S.follow && Date.now() - App.userScroll > 3500) followLine(li);
   if ($('#shadowPanel').hidden === false && !Shadow.busy && !Shadow.blob) Shadow.setSentence(s);
+}
+/* The subtitle band has a fixed height; long sentences shrink to fit instead of pushing the controls down. */
+function fitTelop() {
+  const box = $('#telop'), inner = $('#telopInner'), ja = $('#telopJa'), en = $('#telopEn');
+  if (!box || !inner) return;
+  ja.style.fontSize = ''; en.style.fontSize = ''; en.style.webkitLineClamp = '';
+  if (!box.clientHeight) return;
+  const cs = getComputedStyle(box), avail = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const base = parseFloat(getComputedStyle(ja).fontSize), enBase = parseFloat(getComputedStyle(en).fontSize);
+  const over = () => inner.offsetHeight > avail + 1;
+  const setK = k => { ja.style.fontSize = (base * k).toFixed(1) + 'px'; en.style.fontSize = Math.max(12, enBase * Math.max(k, 0.85)).toFixed(1) + 'px'; };
+  // 1) shrink to a comfortable floor, 2) trim the English line, 3) only then go smaller (never below 12px)
+  let k = 1; const floor1 = Math.min(1, Math.max(0.62, 15 / base)), floor2 = Math.min(floor1, Math.max(0.45, 12 / base));
+  while (over() && k > floor1) { k = Math.max(floor1, k - 0.06); setK(k); }
+  if (over()) en.style.webkitLineClamp = '2';
+  if (over()) en.style.webkitLineClamp = '1';
+  while (over() && k > floor2) { k = Math.max(floor2, k - 0.05); setK(k); }
 }
 function followLine(li) {
   const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
@@ -1957,19 +2419,22 @@ function setRate(r) {
 
 /* ---------- open / close episodes ---------- */
 function showStage(on) { $('#welcome').hidden = on; $('#stage').hidden = !on; }
-function closeEpisode() {
+function closeEpisode({ save = true } = {}) {
+  if (save && App.ep && App.player) { App.ep.pos = App.player.time(); App.ep.posAt = Date.now(); saveEpisode(App.ep, { bump: false }).catch(() => {}); }
   App.player?.destroy(); App.player = null; App.ep = null; App.chunkIdx = -1; App.active = -1;
   history.replaceState(null, '', location.pathname);
-  showStage(false); renderRecent();
+  document.title = '聞き取り Kikitori';
+  showStage(false); renderHome();
 }
 async function openEpisodeById(id, t) { const ep = await getEpisode(id); if (!ep) return toast('That episode isn\'t in your library.', { err: true }); openEpisode(ep, t); $('#libraryDlg').close?.(); }
 async function openEpisode(ep, t) {
   App.player?.destroy(); App.player = null;
   App.ep = ep; App.chunkIdx = -1; App.active = -1; App.loopTarget = null; App.starOnly = false;
+  ep.openedAt = Date.now(); saveEpisode(ep, { bump: false, folder: false }).catch(() => {});
   showStage(true);
   const stage = $('#stage'); stage.classList.toggle('is-yt', ep.kind === 'youtube'); stage.classList.toggle('is-audio', ep.kind === 'audio');
   $('#vbox').hidden = ep.kind !== 'youtube'; $('#audioTitle').hidden = ep.kind !== 'audio';
-  $('#telopJa').textContent = 'Press play'; $('#telop').classList.add('empty'); $('#telopEn').textContent = '';
+  $('#telopJa').textContent = 'Press play'; $('#telop').classList.add('empty'); $('#telopEn').textContent = ''; fitTelop();
   const start = t != null ? t : (ep.pos || 0);
   const q = new URLSearchParams(); if (ep.kind === 'youtube') q.set('yt', ep.ytId); else q.set('ep', ep.id);
   history.replaceState(null, '', `${location.pathname}?${q}`);
@@ -2011,7 +2476,7 @@ async function openYouTube(input, t) {
   const id = ytIdFrom(input);
   if (!id) return toast('That doesn\'t look like a YouTube link.', { err: true });
   let ep = await getEpisode('yt_' + id);
-  if (!ep) { ep = newEpisode({ id: 'yt_' + id, kind: 'youtube', ytId: id, title: 'YouTube ' + id }); await saveEpisode(ep); }
+  if (!ep) { ep = newEpisode({ id: 'yt_' + id, kind: 'youtube', ytId: id, title: 'YouTube ' + id }); if (!App.ep && LibUI.folder.startsWith('f_')) ep.folder = LibUI.folder; await saveEpisode(ep); }
   openEpisode(ep, t);
 }
 async function probeDuration(blob) {
@@ -2027,7 +2492,7 @@ async function openAudioFile(file) {
   let ep = await getEpisode(id);
   let d = await probeDuration(file);
   if (!d) { const kind = await Cut.sniff(file); if (kind === 'mp3') { try { d = (await Cut.mp3Index(id, file)).dur; } catch {} } }
-  if (!ep) { ep = newEpisode({ id, kind: 'audio', title: file.name.replace(/\.[^.]+$/, ''), audio: { name: file.name, size: file.size, type: file.type, lastModified: file.lastModified }, duration: d }); buildChunks(ep); }
+  if (!ep) { ep = newEpisode({ id, kind: 'audio', title: file.name.replace(/\.[^.]+$/, ''), audio: { name: file.name, size: file.size, type: file.type, lastModified: file.lastModified }, duration: d }); buildChunks(ep); if (!App.ep && LibUI.folder.startsWith('f_')) ep.folder = LibUI.folder; }
   try { await DB.put('blobs', file, id); } catch (e) { toast('Couldn\'t keep a copy of the audio in browser storage; you may need to pick the file again next time.', { err: true }); }
   navigator.storage?.persist?.().catch(() => {});
   await saveEpisode(ep);
@@ -2183,7 +2648,7 @@ const Shadow = {
     const btn = $('#checkBtn'); btn.disabled = true; btn.textContent = 'Checking…';
     try {
       const ext = /mp4|m4a|aac/.test(this.blob.type) ? 'm4a' : /ogg/.test(this.blob.type) ? 'ogg' : 'webm';
-      const r = await sttTranscribe(this.blob, 'mine.' + ext, '日本語の発話です。');
+      const r = await sttTranscribe(this.blob, 'mine.' + ext, '日本語の発話です。', null);
       const heard = r.segments.map(s => s.t).join('');
       const target = [...normJa(plainOf(this.sent.f))], got = [...normJa(heard)];
       const { hit, score } = lcsHits(target, got);
@@ -2218,7 +2683,7 @@ async function openSettings() {
   for (const id of ['sttProvider', 'sttModel', 'sttBase', 'sttMaxMB', 'llmProvider', 'llmModel', 'llmBase', 'llmConc', 'level', 'ytSource', 'ytGeminiModel', 'chunkMin']) $('#' + id).value = S[id];
   for (const id of ['autoProcess', 'prefetch', 'copyAudio']) $('#' + id).checked = !!S[id];
   onProviderChange('stt'); $('#sttModel').value = S.sttModel; onProviderChange('llm'); $('#llmModel').value = S.llmModel;
-  renderLockState();
+  renderLockState(); renderUsageMonth();
   dlg.returnValue = '';
   dlg.showModal();
 }
@@ -2233,7 +2698,7 @@ function renderLockState() {
   } }, 'Lock with passphrase…'));
   box.append(' ', el('button', { class: 'btn small quiet', type: 'button', onclick: () => { if (confirm('Delete all saved API keys from this browser?')) { Keys.forget(); KEY_FIELDS.forEach(k => $('#k_' + k).value = ''); renderLockState(); renderKeysNote(); } } }, 'Forget all keys'));
 }
-async function saveKeysFromForm() { const obj = {}; for (const k of KEY_FIELDS) { const v = $('#k_' + k).value.trim(); if (v) obj[k] = v; } await Keys.save(obj); }
+async function saveKeysFromForm() { const obj = {}; if (Keys.get('github')) obj.github = Keys.get('github'); for (const k of KEY_FIELDS) { const v = $('#k_' + k).value.trim(); if (v) obj[k] = v; } await Keys.save(obj); }
 async function saveSettingsFromForm() {
   await saveKeysFromForm();
   for (const id of ['sttProvider', 'sttModel', 'sttBase', 'llmProvider', 'llmModel', 'llmBase', 'level', 'ytSource', 'ytGeminiModel']) S[id] = $('#' + id).value.trim();
@@ -2257,20 +2722,14 @@ async function testProvider(name) {
 }
 
 /* ---------- dialogs: library ---------- */
-async function openLibrary() { await renderLibrary(); renderFolderState(); $('#libraryDlg').showModal(); }
-async function renderLibrary() {
-  const ul = $('#libList'); ul.innerHTML = '';
-  const eps = (await DB.all('episodes')).map(e => Cache.get(e.id) || e).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  if (!eps.length) { ul.append(el('li', { class: 'empty-note' }, 'Nothing here yet. Load a video or open an audio file.')); return; }
-  for (const ep of eps) {
-    ul.append(el('li', {},
-      el('span', { class: 'kind' }, ep.kind === 'youtube' ? 'YouTube' : 'Audio'),
-      el('button', { class: 'ep-open', type: 'button', onclick: () => openEpisodeById(ep.id) }, el('span', { class: 'ep-title' }, ep.title || ep.id), el('span', { class: 'ep-meta' }, epMeta(ep))),
-      el('button', { class: 'btn small', type: 'button', onclick: () => exportEpisode(ep) }, 'Export'),
-      el('button', { class: 'btn small quiet', type: 'button', onclick: async () => { if (confirm(`Delete "${ep.title}" from the library${Folder.status === 'ready' ? ' and the sync folder' : ''}?`)) { await deleteEpisode(ep.id); renderLibrary(); renderRecent(); } } }, 'Delete')));
-  }
+async function openLibrary() {
+  if (App.ep) closeEpisode(); else showStage(false);
+  await renderHome();
+  $('#librarySection').scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
+function openSync() { renderFolderState(); renderCloudState(); $('#libraryDlg').showModal(); }
 function renderFolderState() {
+  updateLibWhere();
   const box = $('#folderState'); if (!box) return; box.innerHTML = '';
   const row = (...k) => el('div', { style: 'display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.3rem 0' }, ...k);
   if (Folder.status === 'unsupported') {
@@ -2287,6 +2746,30 @@ function renderFolderState() {
       el('button', { class: 'btn small', type: 'button', onclick: () => Folder.sync().then(() => toast('Library synced.')).catch(showError) }, Folder.syncing ? 'Syncing…' : 'Sync now'),
       el('button', { class: 'btn quiet small', type: 'button', onclick: async () => { await Folder.disconnect(); renderFolderState(); } }, 'Disconnect')));
   }
+}
+function usageTable(u, emptyText) {
+  const rows = usageRows(u);
+  if (!rows.length) return el('p', { class: 'help', style: 'margin:0' }, emptyText);
+  const total = rows.reduce((n, r) => r.cost == null ? n : n + r.cost, 0), unknown = rows.some(r => r.cost == null);
+  return el('table', { class: 'usage-table' }, el('tbody', {},
+    ...rows.map(r => el('tr', {}, el('td', {}, r.what), el('td', {}, fmtUsd(r.cost)))),
+    el('tr', { class: 'total' }, el('td', {}, unknown ? 'Total for known prices' : 'Total at paid-tier prices'), el('td', {}, fmtUsd(total)))));
+}
+function openPartUsage() {
+  const ep = App.ep, ch = curChunk(); if (!ep || !ch) return;
+  const src = { captions: ep.source?.captions?.provider === 'file' ? 'an imported subtitle file' : 'YouTube captions via Supadata', gemini: `Gemini listening to the video${ch.meta?.ytModel ? ` (${ch.meta.ytModel} requested)` : ''}`, stt: `Whisper speech-to-text (${ch.meta?.stt || S.sttModel})` }[ch.meta?.src] || 'unknown (transcribed before usage tracking was added)';
+  const body = $('#infoBody'); body.innerHTML = '';
+  body.append(el('p', {}, `Transcript source: ${src}.`),
+    usageTable(ch.usage, 'No usage was recorded for this part. It was transcribed before usage tracking was added, or nothing has run yet.'),
+    el('p', { class: 'help', style: 'margin:.6rem 0 0' }, 'Rows list the models that actually answered, including any automatic switch to another Gemini model. On free tiers (no billing set up) the real cost is $0.'));
+  $('#infoTitle').textContent = `What ${fmt(ch.start)}–${fmt(ch.end)} used`;
+  $('#infoDlg').showModal();
+}
+function renderUsageMonth() {
+  const box = $('#usageMonth'); if (!box) return; box.innerHTML = '';
+  const m = Usage.month(); const u = Usage.all()[m];
+  box.append(usageTable(u, 'Nothing has run this month on this device yet.'),
+    el('p', { class: 'help', style: 'margin:.4rem 0 0' }, 'Counted on this device from what each service reported, priced at paid-tier rates. If you haven\'t turned on billing with Google and Groq, you pay nothing; you\'re on their free tiers.'));
 }
 function openVocab() {
   const ch = curChunk(); const body = $('#vocabBody'); body.innerHTML = '';
@@ -2344,6 +2827,11 @@ function wire() {
   $('#subsInput').addEventListener('change', e => { importSubs(e.target.files[0]).catch(showError); e.target.value = ''; $('#epMenu').open = false; });
   $('#importInput').addEventListener('change', e => { importFiles([...e.target.files]).catch(showError); e.target.value = ''; });
   $('#libBtn').addEventListener('click', openLibrary);
+  $('#syncBtn').addEventListener('click', openSync);
+  $('#libSearch').addEventListener('input', e => { LibUI.q = e.target.value; renderHome(); });
+  $('#libKinds').addEventListener('click', e => { const b = e.target.closest('[data-kind]'); if (!b) return; LibUI.kind = b.dataset.kind; $$('#libKinds [data-kind]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); renderHome(); });
+  new ResizeObserver(() => requestAnimationFrame(fitTelop)).observe($('#telop'));
+  document.fonts?.ready?.then(fitTelop);
   $('#setBtn').addEventListener('click', openSettings);
   $('#exportAllBtn').addEventListener('click', () => exportAll().catch(showError));
   $$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close('cancel')));
@@ -2384,13 +2872,15 @@ function wire() {
     const b = e.target.closest('button[data-act]'); if (!b) return; $('#epMenu').open = false;
     const ep = App.ep, ch = curChunk(); if (!ep) return;
     if (b.dataset.act === 'vocab') openVocab();
+    if (b.dataset.act === 'usage') openPartUsage();
+    if (b.dataset.act === 'folder') { const body = $('#infoBody'); body.innerHTML = ''; const pop = el('div', { class: 'menu-pop', style: 'position:static;box-shadow:none;border:0;padding:0' }, ...folderMenuItems(ep, () => $('#infoDlg').close())); body.append(pop); $('#infoTitle').textContent = 'Move to folder'; $('#infoDlg').showModal(); }
     if (b.dataset.act === 'retranscribe' && ch) { if (confirm('Transcribe this part again from scratch? Its current lines, grammar notes and stars will be replaced.')) processChunk(ep, ch.i, { redoCues: true }); }
     if (b.dataset.act === 'reannotate' && ch?.cues?.length) { if (confirm('Redo furigana, translations and vocabulary for this part? The transcript itself is kept.')) processChunk(ep, ch.i, { redoAnnot: true }); }
     if (b.dataset.act === 'rename') { const t = prompt('Episode title', ep.title); if (t?.trim()) { ep.title = t.trim(); await saveEpisode(ep); renderAll(); } }
     if (b.dataset.act === 'export') exportEpisode(ep).catch(showError);
     if (b.dataset.act === 'copyLink' && ep.ytId) { const url = `${location.origin}${location.pathname}?yt=${ep.ytId}`; navigator.clipboard?.writeText(url).then(() => toast('Link copied.'), () => toast(url)); }
   });
-  document.addEventListener('click', e => { const m = $('#epMenu'); if (m.open && !m.contains(e.target)) m.open = false; });
+  document.addEventListener('click', e => { $$('details.menu[open]').forEach(m => { if (!m.contains(e.target)) m.open = false; }); });
   // scrolling: pause auto-follow briefly when the reader scrolls
   for (const ev of ['wheel', 'touchmove']) window.addEventListener(ev, () => { App.userScroll = Date.now(); }, { passive: true });
   // keyboard
@@ -2409,6 +2899,8 @@ function wire() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && App.ep && App.player) { App.ep.pos = App.player.time(); App.ep.posAt = Date.now(); saveEpisode(App.ep, { bump: false }).catch(() => {}); }
     if (document.visibilityState === 'visible' && Folder.status === 'ready' && Date.now() - Folder.lastSync > 60000) Folder.sync().catch(() => {});
+    if (document.visibilityState === 'visible' && Cloud.status === 'ready' && Date.now() - Cloud.lastSync > 60000) Cloud.sync().catch(() => {});
+    if (document.visibilityState === 'hidden') setTimeout(() => Cloud.flush(), 250);
   });
   window.addEventListener('pagehide', () => { if (App.ep && App.player) { App.ep.pos = App.player.time(); App.ep.posAt = Date.now(); DB.put('episodes', JSON.parse(JSON.stringify(App.ep))).catch(() => {}); } });
   for (const ev of ['play', 'playing', 'pause', 'ended']) $('#audioEl').addEventListener(ev, updatePlayIcon);
@@ -2437,14 +2929,16 @@ async function boot() {
   wire(); applyViewModes(); renderSpeed(); renderKeysNote();
   window.addEventListener('unhandledrejection', e => { if (e.reason instanceof UserError || e.reason instanceof ApiError) { e.preventDefault(); showError(e.reason); } });
   try { await DB.open(); } catch (e) { toast('Browser storage is unavailable (private browsing?). The library won\'t be saved.', { err: true }); }
+  await Folders.load();
   await Folder.init().catch(e => console.warn(e));
+  await Cloud.init().catch(e => console.warn(e));
   // reset jobs that were interrupted by a reload
   for (const ep of await DB.all('episodes').catch(() => [])) { let d = false; ep.chunks?.forEach(c => { if (c.status === 'working') { c.status = c.sentences?.length ? 'partial' : (c.cues?.length ? 'partial' : 'none'); d = true; } }); if (d) await DB.put('episodes', ep); }
   const q = new URLSearchParams(location.search);
   const t = q.has('t') ? parseFloat(q.get('t')) : undefined;
   if (q.get('yt')) openYouTube(q.get('yt'), t);
   else if (q.get('ep')) openEpisodeById(q.get('ep'), t);
-  else renderRecent();
+  else renderHome();
 }
 boot();
 </script>
