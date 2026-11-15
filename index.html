@@ -116,6 +116,8 @@ a{color:inherit}
 .folder-bar .menu>summary{padding:.2rem .5rem}
 .lib-card[draggable="true"]{cursor:grab}
 .lib-card.dragging{opacity:.45}
+.nudge{display:inline-flex;gap:.2rem;margin-left:.3rem}
+.nudge .btn{color:var(--mute)}
 .menu-pop .sep{border-top:1px solid var(--line);margin:.3rem 0}
 .menu-pop .hd{font-size:.75rem;color:var(--mute);padding:.25rem .6rem 0}
 .menu-pop button[aria-current="true"]::before{content:"✓ "}
@@ -517,6 +519,12 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
         <legend>Processing &amp; playback</legend>
         <div class="check"><input type="checkbox" id="autoProcess"><label for="autoProcess">Transcribe a part automatically when I start playing it</label></div>
         <div class="check"><input type="checkbox" id="prefetch"><label for="prefetch">Prepare the next part when 5 minutes remain</label></div>
+        <div class="field"><label for="ytPasses">When Gemini transcribes a YouTube video</label><select id="ytPasses">
+          <option value="1">Listen once</option><option value="2">Listen twice and compare the timing</option>
+        </select><p class="help">Listening twice catches the occasional section whose line times come out badly wrong, and roughly doubles what transcription uses (about $0.50 instead of $0.25 per hour of video at paid prices).</p></div>
+        <div class="field"><label for="leadIn">Start each line early by</label><select id="leadIn">
+          <option value="auto">Automatic</option><option value="0">Don't</option><option value="0.2">0.2 s</option><option value="0.4">0.4 s</option><option value="0.6">0.6 s</option><option value="0.8">0.8 s</option><option value="1">1 s</option>
+        </select><p class="help">Line times are estimates, so when you click, loop or shadow a line it starts a moment before its marked time and plays a moment past its end. Automatic uses 0.6 to 0.8 s for videos Gemini transcribed (its times are only good to about a second) and 0.25 s otherwise.</p></div>
         <div class="field"><label for="chunkMin">Part length (min)</label><input id="chunkMin" type="number" min="5" max="60" step="5"><p class="help">Applies to newly added episodes.</p></div>
         <div class="check"><input type="checkbox" id="copyAudio"><label for="copyAudio">Copy audio files into the library folder (so other computers can play them)</label></div>
         <p class="help" style="margin-top:.6rem">Shortcuts: Space play/pause · ← → previous/next sentence · R replay · L loop · P pause after each · F furigana · T translation · G grammar · M record</p>
@@ -644,7 +652,7 @@ const DEFAULTS = {
   llmProvider: 'gemini', llmModel: 'gemini-3.1-flash-lite', llmBase: '', llmConc: 2, level: 'N2 → N1',
   ytSource: 'auto', ytGeminiModel: 'gemini-3.1-flash-lite',
   autoProcess: true, prefetch: false, chunkMin: 30, copyAudio: false,
-  furi: 'show', trans: 'show', pauseAfter: false, rate: 1, follow: true, shadowMode: 'after',
+  furi: 'show', trans: 'show', pauseAfter: false, rate: 1, follow: true, shadowMode: 'after', leadIn: 'auto', ytPasses: '1',
 };
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -738,8 +746,9 @@ const DB = {
 };
 
 /* ---------- toasts ---------- */
-function toast(msg, { err = false, action, label, ms } = {}) {
-  const t = el('div', { class: 'toast' + (err ? ' err' : ''), role: err ? 'alert' : 'status' }, el('span', { class: 'msg' }, msg));
+function toast(msg, { err = false, action, label, ms, key } = {}) {
+  if (key) $$('#toasts .toast').forEach(x => { if (x.dataset.key === key) x.remove(); });
+  const t = el('div', { class: 'toast' + (err ? ' err' : ''), role: err ? 'alert' : 'status', 'data-key': key || null }, el('span', { class: 'msg' }, msg));
   if (action) t.append(el('button', { type: 'button', onclick: () => { action(); t.remove(); } }, label || 'Open'));
   t.append(el('button', { type: 'button', 'aria-label': 'Dismiss', onclick: () => t.remove() }, '×'));
   $('#toasts').append(t);
@@ -1041,39 +1050,110 @@ async function supadataCaptions(videoId, usage) {
   if (lang && !lang.startsWith('ja')) { const e = new UserError(`No Japanese captions (found: ${[lang, ...(j.availableLangs || [])].filter((v, i, a) => a.indexOf(v) === i).join(', ')}).`); e.noJa = true; throw e; }
   return tidyCues(j.content.map(c => ({ s: (+c.offset || 0) / 1000, e: ((+c.offset || 0) + (+c.duration || 0)) / 1000, t: c.text })));
 }
+/* Gemini listens to the video and estimates when each line is spoken. Measured on real videos:
+   - asked for plain seconds it drifts by tens of seconds; asked for the player's MM:SS clock it stays on it
+   - it needs a frame (time marker) every second, not every five
+   - an occasional run still goes badly wrong
+   So: 5-minute windows, MM:SS.s timestamps, 1 fps, and every window is transcribed twice and the two runs
+   are compared. Runs that agree are averaged; if they disagree a third run breaks the tie. */
+const YT_TS_SCHEMA = { type: 'OBJECT', required: ['segments'], properties: { segments: { type: 'ARRAY', items: { type: 'OBJECT', required: ['start', 'end', 'text'], properties: { start: { type: 'STRING' }, end: { type: 'STRING' }, text: { type: 'STRING' } } } } } };
+const YT_WINDOW = 300;
+function parseTs(v) {
+  if (typeof v === 'number') return v;
+  const str = String(v ?? '').trim().replace(/[^\d:.]/g, '');
+  if (!str) return NaN;
+  const p = str.split(':').map(Number);
+  return p.some(x => !isFinite(x)) ? NaN : p.reduce((x, y) => x * 60 + y, 0);
+}
+function charTimeline(segs) {
+  let str = ''; const tm = [];
+  for (const c of segs) { const ch = [...normJa(c.t)]; ch.forEach((x, i) => { str += x; tm.push(c.s + (c.e - c.s) * i / Math.max(1, ch.length)); }); }
+  return { str, tm };
+}
+function timingAgreement(A, B) {
+  const a = charTimeline(A), b = charTimeline(B);
+  if (a.str.length < 24 && b.str.length < 24) return { good: true, n: 0, med: 0 };       // (near) silence in both
+  const d = [];
+  for (let i = 0; i + 8 <= a.str.length; i += 10) { const pr = a.str.slice(i, i + 8), j = b.str.indexOf(pr); if (j >= 0 && b.str.indexOf(pr, j + 1) < 0) d.push(Math.abs(b.tm[j] - a.tm[i])); }
+  d.sort((x, y) => x - y);
+  const med = d.length ? d[d.length >> 1] : Infinity, p90 = d.length ? d[Math.floor(0.9 * (d.length - 1))] : Infinity;
+  return { good: d.length >= 3 && med <= 1.5 && p90 <= 5, n: d.length, med, p90 };
+}
+function mergeTimings(A, B) {
+  const base = charTimeline(A).str.length >= charTimeline(B).str.length ? A : B, other = base === A ? B : A;
+  const o = charTimeline(other);
+  return base.map(c => {
+    const pr = normJa(c.t).slice(0, 6); if (pr.length < 4) return c;
+    const j = o.str.indexOf(pr); if (j < 0 || o.str.indexOf(pr, j + 1) >= 0) return c;
+    const t2 = o.tm[j]; if (Math.abs(t2 - c.s) > 2.5) return c;
+    const s2 = (c.s + t2) / 2; return { s: s2, e: Math.max(c.e, s2 + 0.2), t: c.t };
+  });
+}
+/* A line can't be spoken faster than ~14 characters a second or drag on for many seconds per character. */
+function plausibleDurations(cues) {
+  for (let i = 0; i < cues.length; i++) {
+    const c = cues[i], n = cues[i + 1], len = [...normJa(c.t)].length;
+    const min = len / 14, max = len / 2.5 + 2.5;
+    if (c.e - c.s < min) c.e = Math.min(c.s + min, n ? Math.max(c.e, n.s) : c.s + min);
+    if (c.e - c.s > max) c.e = c.s + max;
+  }
+  return cues;
+}
 async function geminiYouTube(ep, s, e, prog, usage) {
   const model = S.ytGeminiModel || 'gemini-3.1-flash-lite';
-  const out = []; let from = s;
-  for (let round = 0; round < 5 && from < e - 15; round++) {
-    prog?.(`Gemini is listening to ${fmt(from)}–${fmt(e)}…`);
+  const wins = []; for (let a = s; a < e - 5; a += YT_WINDOW) wins.push([a, Math.min(e, a + YT_WINDOW)]);
+  if (wins.length > 1 && wins.at(-1)[1] - wins.at(-1)[0] < 45) { wins.at(-2)[1] = wins.at(-1)[1]; wins.pop(); }
+  const one = async (from, to) => {
+    const long = to >= 3600, form = long ? 'H:MM:SS.s' : 'MM:SS.s', ex = long ? '1:07:42.5' : '07:42.5';
     const parts = [
-      { fileData: { fileUri: `https://www.youtube.com/watch?v=${ep.ytId}` }, videoMetadata: { startOffset: `${Math.floor(from)}s`, endOffset: `${Math.ceil(e)}s`, fps: 0.2 } },
-      { text: `Transcribe the Japanese speech in this video between ${fmt(from)} and ${fmt(e)}, word for word.
-Return JSON {"segments":[{"s":start,"e":end,"t":"text"}]} where s and e are seconds measured from the START OF THE FULL VIDEO (not from the clip).
-One segment per sentence or short phrase, at most about 12 seconds each, in order. Use natural Japanese punctuation. Do not translate. No speaker labels, no descriptions of music or sounds.` },
+      { fileData: { fileUri: `https://www.youtube.com/watch?v=${ep.ytId}` }, videoMetadata: { startOffset: `${Math.floor(from)}s`, endOffset: `${Math.ceil(to)}s`, fps: 1 } },
+      { text: `Transcribe the Japanese speech in this video between ${fmt(from)} and ${fmt(to)}, word for word.
+Return JSON {"segments":[{"start":"${form}","end":"${form}","text":"..."}]}. "start" and "end" are timestamps in ${form} format (for example "${ex}") on the same clock the video player shows, counted from the start of the full video. start is the moment the first sound of the segment begins; end is when its last sound ends.
+One segment per sentence or short phrase, at most about 10 seconds each, in order. Include every utterance, fillers too. Use natural Japanese punctuation. Do not translate. No speaker labels, no descriptions of music or sounds.` },
     ];
     let res;
-    const call = () => geminiCall({ model, parts, schema: YT_SCHEMA, maxTokens: 60000, temperature: 0, extraGen: { mediaResolution: 'MEDIA_RESOLUTION_LOW' }, usage });
+    const call = () => geminiCall({ model, parts, schema: YT_TS_SCHEMA, maxTokens: 30000, temperature: 0, extraGen: { mediaResolution: 'MEDIA_RESOLUTION_LOW' }, usage });
     try { res = await call(); }
     catch (err) {
       if (err.status === 400 && /fps|video_?metadata/i.test(err.message) && parts[0].videoMetadata.fps) { delete parts[0].videoMetadata.fps; res = await call(); }
       else if (err.truncated && err.partial) { try { res = { json: parseJSONLoose(err.partial.replace(/,\s*\{[^}]*$/, '') + ']}') }; } catch { throw err; } }
       else throw err;
     }
-    let segs = (res.json.segments || []).map(x => ({ s: +x.s, e: +x.e, t: String(x.t || '') })).filter(x => isFinite(x.s) && x.t.trim());
-    if (!segs.length) break;
-    const inWin = segs.filter(x => x.s >= from - 10 && x.s <= e + 10).length / segs.length;
-    const relWin = segs.filter(x => x.s >= -2 && x.s <= (e - from) + 10).length / segs.length;
-    if (from > 30 && inWin < 0.5 && relWin > 0.8) segs = segs.map(x => ({ s: x.s + from, e: x.e + from, t: x.t }));
-    segs = segs.filter(x => x.s >= from - 2 && x.s < e + 2);
-    if (!segs.length) break;
-    out.push(...segs);
-    const last = segs[segs.length - 1];
-    if (last.e >= e - 20 || last.s <= from) break;
-    from = Math.max(last.e, last.s + 1);
-  }
-  if (!out.length) throw new ApiError('Gemini didn\'t return any speech for this part.');
-  return tidyCues(out);
+    let segs = (res.json.segments || []).map(x => ({ s: parseTs(x.start ?? x.s), e: parseTs(x.end ?? x.e), t: String(x.text ?? x.t ?? '') })).filter(x => isFinite(x.s) && x.t.trim());
+    if (!segs.length) return [];
+    const inWin = segs.filter(x => x.s >= from - 10 && x.s <= to + 10).length / segs.length;
+    const relWin = segs.filter(x => x.s >= -2 && x.s <= (to - from) + 10).length / segs.length;
+    if (from > 30 && inWin < 0.5 && relWin > 0.8) segs = segs.map(x => ({ s: x.s + from, e: x.e + from, t: x.t }));   // counted from the clip start
+    segs = segs.filter(x => x.s >= from - 1.5 && x.s < to + 1.5).map(x => ({ s: clamp(x.s, from, to), e: isFinite(x.e) ? x.e : x.s, t: x.t }));
+    return tidyCues(segs);
+  };
+  let done = 0, rough = 0;
+  const twice = String(S.ytPasses) === '2';
+  const doWindow = async ([from, to]) => {
+    if (!twice) { const out = await one(from, to); done++; prog?.(`Gemini is listening… ${done} of ${wins.length} sections done`, 0.02 + 0.3 * done / wins.length); return out; }
+    const settled = await Promise.allSettled([one(from, to), one(from, to)]);
+    const runs = settled.filter(r => r.status === 'fulfilled').map(r => r.value);
+    if (!runs.length) throw settled[0].reason;
+    let out = null;
+    if (runs.length === 2 && timingAgreement(runs[0], runs[1]).good) out = mergeTimings(runs[0], runs[1]);
+    else {
+      const third = await one(from, to).catch(() => null);
+      if (third) runs.push(third);
+      let best = null;
+      for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) { const ag = timingAgreement(runs[i], runs[j]); if (ag.good && (!best || ag.med < best.ag.med)) best = { i, j, ag }; }
+      if (best) out = mergeTimings(runs[best.i], runs[best.j]);
+      else { rough++; out = runs.slice().sort((x, y) => charTimeline(y).str.length - charTimeline(x).str.length)[0]; }
+    }
+    done++; prog?.(`Gemini is listening… ${done} of ${wins.length} sections timed`, 0.02 + 0.3 * done / wins.length);
+    return out;
+  };
+  prog?.(`Gemini is listening to ${fmt(s)}–${fmt(e)}…`);
+  const results = new Array(wins.length); let next = 0;
+  await Promise.all(Array.from({ length: Math.min(2, wins.length) }, async () => { while (next < wins.length) { const i = next++; results[i] = await doWindow(wins[i]); } }));
+  const all = plausibleDurations(tidyCues(results.flat()));
+  if (!all.length) throw new ApiError('Gemini didn\'t return any speech for this part.');
+  all.rough = rough; all.checked = twice;
+  return all;
 }
 function parseSubtitles(text) {
   text = String(text).replace(/\r/g, '').replace(/^﻿/, '');
@@ -1881,7 +1961,7 @@ function estimateCost(ep, ch) {
   const min = (ch.end - ch.start) / 60; let usd = 0, known = true;
   const path = transcriptPath(ep);
   if (path === 'stt') { const p = PRICE.stt[S.sttModel]; if (p != null) usd += p * min / 60; else known = false; }
-  if (path === 'gemini') { const m = S.ytGeminiModel; const a = PRICE.geminiAudio[m], o = PRICE.llm[m]; if (a && o) usd += min * 60 * 32 / 1e6 * a + min * 500 / 1e6 * o[1]; else known = false; }
+  if (path === 'gemini') { const m = S.ytGeminiModel; const a = PRICE.geminiAudio[m], o = PRICE.llm[m]; if (a && o) usd += (String(S.ytPasses) === '2' ? 2 : 1) * (min * 60 * 32 / 1e6 * a + min * 60 * 66 / 1e6 * o[0] + min * 1000 / 1e6 * o[1]); else known = false; }
   const lp = PRICE.llm[S.llmModel] || PRICE.llm[String(S.llmModel).replace(/^(google|openai)\//, '')];
   if (lp) usd += min * 700 / 1e6 * lp[0] + min * 1400 / 1e6 * lp[1]; else known = false;
   return known ? usd : null;
@@ -2092,7 +2172,8 @@ async function processChunk(ep, i, { redoCues = false, redoAnnot = false } = {})
     ch.sentences.forEach((s, k) => { s.id = `${i}.${k}`; });
     ch.status = failed ? 'partial' : 'ready';
     ch.err = failed ? `Translation failed for some lines: ${ch.lastErr || ''}` : null;
-    ch.meta = { at: Date.now(), src: transcriptPath(ep), stt: transcriptPath(ep) === 'stt' ? S.sttModel : undefined, llm: S.llmModel, ytModel: transcriptPath(ep) === 'gemini' ? S.ytGeminiModel : undefined };
+    ch.meta = { at: Date.now(), src: transcriptPath(ep), stt: transcriptPath(ep) === 'stt' ? S.sttModel : undefined, llm: S.llmModel, ytModel: transcriptPath(ep) === 'gemini' ? S.ytGeminiModel : undefined, timing: transcriptPath(ep) === 'gemini' ? (ch.cues.rough ? 'rough' : ch.cues.checked ? 'checked' : 'single') : undefined };
+    if (ch.cues.rough) toast(`Gemini's timing didn't agree with itself in ${ch.cues.rough} five-minute section${ch.cues.rough === 1 ? '' : 's'} of this part, so lines there may be a few seconds off. Use Earlier / Later on a line to fix it.`);
     ch.cues = ch.cues.map(c => ({ s: c.s, e: c.e, t: c.t }));
     await saveEpisode(ep);
     if (failed) toast(ch.err, { err: true });
@@ -2331,6 +2412,9 @@ function lineNode(s, k) {
     el('button', { class: 'btn', type: 'button', 'data-act': 'grammar', title: 'Explain grammar (G)' }, 'Grammar'),
     s.v?.length ? el('button', { class: 'btn', type: 'button', 'data-act': 'vocab', title: 'Key vocabulary' }, `Words ${s.v.length}`) : null,
     el('button', { class: 'btn', type: 'button', 'data-act': 'shadow', title: 'Record yourself' }, 'Shadow'),
+    el('span', { class: 'nudge', title: 'Move where this line starts, then replay it' },
+      el('button', { class: 'btn', type: 'button', 'data-act': 'earlier', 'aria-label': 'Start this line 0.2 seconds earlier' }, '◂ Earlier'),
+      el('button', { class: 'btn', type: 'button', 'data-act': 'later', 'aria-label': 'Start this line 0.2 seconds later' }, 'Later ▸')),
     el('button', { class: 'btn star', type: 'button', 'data-act': 'star', 'aria-pressed': s.star ? 'true' : 'false', 'aria-label': 'Star' }, '★')));
   return li;
 }
@@ -2523,36 +2607,73 @@ async function importSubs(file) {
 }
 
 /* ---------- playback helpers ---------- */
-function seekTo(t) { App.player?.seek(t); App.lastSeek = Date.now(); App.pausedFor = -1; }
+/* Line times are estimates (Gemini's are the roughest). Starting late cuts off the first word, while starting
+   a little early only adds a breath, so a line is played from slightly before its start to slightly after its end. */
+function leadFor(ch) {
+  const v = S.leadIn ?? 'auto';
+  if (v !== 'auto') return clamp(+v || 0, 0, 1.5);
+  return ch?.meta?.src === 'gemini' ? (ch.meta.timing === 'checked' ? 0.6 : 0.8) : 0.25;
+}
+function linePad(k, sents = curSentences(), ch = curChunk()) {
+  const s = sents[k]; if (!s) return null;
+  const off = App.ep?.sync || 0, lead = leadFor(ch), next = sents[k + 1];
+  const tail = Math.max(0, Math.min(lead * 0.6, next ? next.s - s.e - 0.08 : 0.4));
+  return { start: Math.max(s.s - lead + off, ch ? ch.start + 0.02 : 0, 0), end: s.e + tail + off, s: s.s + off };
+}
+function padFor(sent) {
+  const sents = curSentences(), k = sents.indexOf(sent);
+  if (k >= 0) return { ...linePad(k, sents), k };
+  const off = App.ep?.sync || 0; return { start: sent.s + off, end: sent.e + off, s: sent.s + off, k: -1 };
+}
+// While playing the lead-in, keep the clicked line highlighted instead of the one before it.
+function pinLine(k, until) { App.pin = k >= 0 ? { k, ci: App.chunkIdx, until } : null; }
+function seekTo(t) { App.player?.seek(t); App.lastSeek = Date.now(); App.pausedFor = -1; App.pin = null; }
 function playSentence(k, { loop } = {}) {
   const s = curSentences()[k]; if (!s || !App.player) return;
   if (App.loopOn || loop) App.loopTarget = s;
-  seekTo(s.s + (App.ep.sync || 0)); App.player.play();
+  const pad = linePad(k); seekTo(pad.start); pinLine(k, pad.s); App.player.play();
   setActive(k);
   if (!$('#shadowPanel').hidden && !Shadow.busy) Shadow.setSentence(s);
 }
 function prevSentence() {
   const sents = curSentences(); if (!sents.length || !App.player) return;
-  const t = App.player.time() - (App.ep.sync || 0), k = sentenceAt(sents, t);
+  const t = App.player.time() - (App.ep.sync || 0), k = App.pin ? App.pin.k : sentenceAt(sents, t);
   if (k >= 0 && t - sents[k].s > 1.2) return playSentence(k, { loop: App.loopOn });
   if (k > 0) return playSentence(k - 1, { loop: App.loopOn });
   const ci = App.chunkIdx; if (ci > 0) { const prev = App.ep.chunks[ci - 1]; seekTo(Math.max(prev.start, prev.end - 5)); }
 }
 function nextSentence() {
   const sents = curSentences(); if (!App.player) return;
-  const t = App.player.time() - (App.ep.sync || 0), k = sentenceAt(sents, t);
+  const t = App.player.time() - (App.ep.sync || 0), k = App.pin ? App.pin.k : sentenceAt(sents, t);
   if (k + 1 < sents.length) return playSentence(k + 1, { loop: App.loopOn });
   const nc = App.ep.chunks[App.chunkIdx + 1]; if (nc) seekTo(nc.start + 0.01);
 }
 function replaySentence() { const k = App.active >= 0 ? App.active : sentenceAt(curSentences(), (App.player?.time() || 0) - (App.ep?.sync || 0)); if (k >= 0) playSentence(k); }
 function togglePlay() { const p = App.player; if (!p) return; if (p.playing()) p.pause(); else { if (App.pauseAfter && App.pausedFor >= 0) App.pausedFor = -2; p.play(); } setTimeout(updatePlayIcon, 50); }
-function playRange(s, e) {
+/* Move one line's start. Gemini's remaining error differs from line to line, so a fix applies to that line only;
+   the Timing control above the transcript shifts the whole part. */
+function shiftFrom(k, d) {
+  const ch = curChunk(), sents = curSentences(), x = sents[k]; if (!ch || !x) return;
+  const prev = sents[k - 1], lo = prev ? prev.s + 0.1 : ch.start, hi = x.e - 0.2;
+  const ns = +clamp(x.s + d, lo, Math.max(lo, hi)).toFixed(2); if (ns === x.s) return;
+  const touching = prev && Math.abs(prev.e - x.s) < 0.06;
+  d = ns - x.s; x.s = ns; x.fixed = true;
+  if (prev && (prev.e > ns || touching)) prev.e = ns;
+  saveEpisode(App.ep).catch(() => {});
+  const t = document.querySelector(`#lines .line[data-k="${k}"] .t`); if (t) t.textContent = fmt(x.s);
+  clearTimeout(shiftFrom.timer); const total = (shiftFrom.acc = (shiftFrom.k === k ? shiftFrom.acc || 0 : 0) + d); shiftFrom.k = k;
+  shiftFrom.timer = setTimeout(() => { shiftFrom.acc = 0; }, 4000);
+  toast(`This line now starts ${Math.abs(total).toFixed(1)} s ${total < 0 ? 'earlier' : 'later'}.`, { key: 'nudge' });
+  playSentence(k);
+}
+function playLine(sent) { const r = padFor(sent); return playRange(r.start, r.end, r.k >= 0 ? [r.k, r.s] : null); }
+function playRange(s, e, pin) {
   return new Promise(res => {
     if (!App.player) return res();
     let done = false; const fin = () => { if (done) return; done = true; clearTimeout(guard); res(); };
     const guard = setTimeout(() => { if (App.playUntilCb === fin) { App.playUntil = null; App.playUntilCb = null; App.player?.pause(); } fin(); }, ((e - s) / (S.rate || 1) + 4) * 1000);
     App.playUntil = e - 0.06; App.playUntilCb = fin;
-    seekTo(s); App.player.play();
+    seekTo(s); if (pin) pinLine(pin[0], pin[1]); App.player.play();
   });
 }
 
@@ -2566,15 +2687,22 @@ function tick() {
   if (ch && playing && S.autoProcess && ch.status === 'none' && !App.jobs.has(`${ep.id}:${ch.i}`)) processChunk(ep, ch.i);
   if (ch && playing && S.prefetch && ch.end - t < 300) { const nx = ep.chunks[ch.i + 1]; if (nx && nx.status === 'none' && !App.jobs.has(`${ep.id}:${nx.i}`)) processChunk(ep, nx.i); }
   const sents = ch?.sentences || [];
-  const k = sentenceAt(sents, t - off);
+  let k = sentenceAt(sents, t - off);
+  if (App.pin) {
+    const P = App.pin;
+    if (P.ci === App.chunkIdx && P.k < sents.length && (Date.now() - App.lastSeek < 600 || (t >= P.until - 3 && t < P.until + 0.05))) k = P.k;
+    else App.pin = null;
+  }
   if (App.playUntil != null && t >= App.playUntil - 0.02) { const cb = App.playUntilCb; App.playUntil = null; App.playUntilCb = null; p.pause(); cb?.(); }
   else if (playing && Date.now() - App.lastSeek > 350) {
     const L = App.loopOn ? App.loopTarget : null;
     if (L) {
-      if (t > L.e + off + 1.2 || t < L.s + off - 1.2) App.loopTarget = sents[k] || null;
-      else if (t >= L.e + off - 0.03) seekTo(L.s + off);
-    } else if (App.pauseAfter && k >= 0 && App.pausedFor !== k && App.pausedFor !== -2 && t >= sents[k].e + off - 0.04 && t < sents[k].e + off + 0.5) {
-      App.pausedFor = k; p.pause();
+      const li = sents.indexOf(L), R = li >= 0 ? linePad(li, sents, ch) : { start: L.s + off, end: L.e + off, s: L.s + off };
+      if (t > R.end + 1.2 || t < R.start - 1.2) App.loopTarget = sents[k] || null;
+      else if (t >= R.end - 0.03) { seekTo(R.start); pinLine(li, R.s); }
+    } else if (App.pauseAfter && k >= 0 && App.pausedFor !== k && App.pausedFor !== -2) {
+      const pe = linePad(k, sents, ch).end;
+      if (t >= pe - 0.04 && t < pe + 0.5) { App.pausedFor = k; p.pause(); }
     }
   }
   if (k !== App.active) { setActive(k); if (App.pausedFor === -2) App.pausedFor = -1; }
@@ -2613,7 +2741,7 @@ const Shadow = {
     this.busy = true; this.reset();
     const off = App.ep.sync || 0, dur = Math.max(0.6, s.e - s.s);
     const mode = S.shadowMode;
-    if (mode === 'after') { await playRange(s.s + off, s.e + off); await sleep(150); }
+    if (mode === 'after') { await playLine(s); await sleep(150); }
     const mt = this.mime(); this.chunks = [];
     const rec = new MediaRecorder(this.stream, mt ? { mimeType: mt } : undefined); this.rec = rec;
     rec.ondataavailable = e => { if (e.data.size) this.chunks.push(e.data); };
@@ -2623,7 +2751,7 @@ const Shadow = {
     const limit = (mode === 'after' ? dur * 1.5 + 1.2 : dur / (S.rate || 1) + 0.8) * 1000, t0 = Date.now();
     this.meterTimer = setInterval(() => { $('#recMeter').style.width = Math.min(100, (Date.now() - t0) / limit * 100) + '%'; }, 80);
     this.timer = setTimeout(() => this.stop(), limit);
-    if (mode === 'along') playRange(s.s + off, s.e + off);
+    if (mode === 'along') playLine(s);
   },
   stop() { clearTimeout(this.timer); clearInterval(this.meterTimer); if (this.rec?.state === 'recording') this.rec.stop(); },
   async finish(type) {
@@ -2641,7 +2769,7 @@ const Shadow = {
     for (let x = 0; x < W; x++) { let m = 0; for (let i = x * step; i < (x + 1) * step && i < d.length; i++) m = Math.max(m, Math.abs(d[i])); const h = Math.max(1, m * H * 0.95); g.fillRect(x, (H - h) / 2, 1, h); }
   },
   playMine() { if (!this.url) return Promise.resolve(); App.player?.pause(); const a = new Audio(this.url); return new Promise(res => { a.onended = res; a.onerror = res; a.play().catch(res); }); },
-  async playOrig() { const s = this.sent; if (!s) return; const off = App.ep.sync || 0; await playRange(s.s + off, s.e + off); },
+  async playOrig() { const s = this.sent; if (!s) return; await playLine(s); },
   async compare() { await this.playOrig(); await sleep(250); await this.playMine(); },
   async check() {
     if (!this.blob || !this.sent) return;
@@ -2680,7 +2808,7 @@ async function openSettings() {
   const dlg = $('#settingsDlg');
   if (Keys.locked) { try { await promptUnlock('Unlock your keys to edit settings.'); } catch { return; } }
   for (const k of KEY_FIELDS) { const i = $('#k_' + k); i.value = Keys.get(k); i.type = $('#showKeys').checked ? 'text' : 'password'; }
-  for (const id of ['sttProvider', 'sttModel', 'sttBase', 'sttMaxMB', 'llmProvider', 'llmModel', 'llmBase', 'llmConc', 'level', 'ytSource', 'ytGeminiModel', 'chunkMin']) $('#' + id).value = S[id];
+  for (const id of ['sttProvider', 'sttModel', 'sttBase', 'sttMaxMB', 'llmProvider', 'llmModel', 'llmBase', 'llmConc', 'level', 'ytSource', 'ytGeminiModel', 'chunkMin', 'leadIn', 'ytPasses']) $('#' + id).value = S[id];
   for (const id of ['autoProcess', 'prefetch', 'copyAudio']) $('#' + id).checked = !!S[id];
   onProviderChange('stt'); $('#sttModel').value = S.sttModel; onProviderChange('llm'); $('#llmModel').value = S.llmModel;
   renderLockState(); renderUsageMonth();
@@ -2704,6 +2832,7 @@ async function saveSettingsFromForm() {
   for (const id of ['sttProvider', 'sttModel', 'sttBase', 'llmProvider', 'llmModel', 'llmBase', 'level', 'ytSource', 'ytGeminiModel']) S[id] = $('#' + id).value.trim();
   S.sttMaxMB = clamp(+$('#sttMaxMB').value || 24, 4, 95); S.llmConc = clamp(+$('#llmConc').value || 2, 1, 6); S.chunkMin = clamp(+$('#chunkMin').value || 30, 5, 60);
   for (const id of ['autoProcess', 'prefetch', 'copyAudio']) S[id] = $('#' + id).checked;
+  S.leadIn = $('#leadIn').value || 'auto'; S.ytPasses = $('#ytPasses').value === '2' ? '2' : '1';
   if (!S.sttModel) S.sttModel = PROVIDERS.stt[S.sttProvider].def; if (!S.llmModel) S.llmModel = PROVIDERS.llm[S.llmProvider].def;
   saveSettings(); renderKeysNote(); if (App.ep) renderChunkState();
   toast('Settings saved.');
@@ -2789,6 +2918,7 @@ $('#lines').addEventListener('click', async e => {
   const act = actEl.dataset.act;
   if (act === 'reveal' && document.body.classList.contains('trans-blur')) { li.classList.toggle('reveal'); return; }
   if (act === 'seek' || act === 'reveal') { if (window.getSelection()?.toString()) return; playSentence(k); return; }
+  if (act === 'earlier' || act === 'later') { shiftFrom(k, act === 'earlier' ? -0.2 : 0.2); return; }
   if (act === 'loop') { App.loopOn = true; App.loopTarget = s; applyViewModes(); playSentence(k, { loop: true }); return; }
   if (act === 'star') { s.star = !s.star; actEl.setAttribute('aria-pressed', s.star ? 'true' : 'false'); await saveEpisode(App.ep); return; }
   if (act === 'shadow') { openShadow(true); setActive(k); Shadow.setSentence(s); return; }
