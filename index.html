@@ -432,7 +432,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
       <fieldset>
         <legend>YouTube transcripts</legend>
         <div class="field"><label for="ytSource">Source</label><select id="ytSource"><option value="auto">Captions first, then Gemini</option><option value="supadata">Captions only (Supadata)</option><option value="gemini">Gemini only</option></select><p class="help">Captions are fetched once per video. Gemini listens to the video itself (public videos only) and usually costs a few cents per part; since August 2026 some accounts are billed for the whole video's audio on each request, which makes very long videos pricier. You can also import a subtitle file or attach your own audio from the episode's More menu.</p></div>
-        <div class="field"><label for="ytGeminiModel">Gemini model</label><input id="ytGeminiModel" list="geminiModels" spellcheck="false"><datalist id="geminiModels"><option value="gemini-3.1-flash-lite"><option value="gemini-3.5-flash-lite"><option value="gemini-2.5-flash-lite"><option value="gemini-3.8-flash"></datalist></div>
+        <div class="field"><label for="ytGeminiModel">Gemini model</label><input id="ytGeminiModel" list="geminiModels" spellcheck="false"><datalist id="geminiModels"><option value="gemini-3.1-flash-lite"><option value="gemini-3.5-flash-lite"><option value="gemini-flash-lite-latest"><option value="gemini-3.8-flash"></datalist></div>
       </fieldset>
       <fieldset>
         <legend>Processing &amp; playback</legend>
@@ -540,8 +540,8 @@ const PROVIDERS = {
     custom: { base: '', key: 'custom', models: ['whisper-large-v3-turbo', 'whisper-1'], def: 'whisper-large-v3-turbo' },
   },
   llm: {
-    gemini: { base: 'https://generativelanguage.googleapis.com', key: 'gemini', models: ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'], def: 'gemini-3.1-flash-lite',
-      help: '3.1 Flash-Lite is the cheapest model open to new projects ($0.25 in / $1.50 out per million tokens). 2.5 Flash-Lite is cheaper but only works on accounts that already used it.' },
+    gemini: { base: 'https://generativelanguage.googleapis.com', key: 'gemini', models: ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.8-flash'], def: 'gemini-3.1-flash-lite',
+      help: '3.1 Flash-Lite is the cheapest model open to new projects ($0.25 in / $1.50 out per million tokens). If a model is overloaded, the app switches to another Flash-Lite model automatically.' },
     openai: { base: 'https://api.openai.com/v1', key: 'openai', models: ['gpt-5-mini', 'gpt-5-nano', 'gpt-4.1-mini', 'gpt-4o-mini'], def: 'gpt-5-mini', help: 'gpt-5-mini balances accuracy and cost; gpt-5-nano is cheaper but weaker on readings.' },
     groq: { base: 'https://api.groq.com/openai/v1', key: 'groq', models: ['openai/gpt-oss-120b', 'qwen/qwen3-32b'], def: 'openai/gpt-oss-120b', help: 'Fast and uses your Groq key, but Japanese readings are less reliable than Gemini.' },
     openrouter: { base: 'https://openrouter.ai/api/v1', key: 'openrouter', models: ['google/gemini-3.1-flash-lite', 'google/gemini-2.5-flash-lite', 'openai/gpt-5-mini'], def: 'google/gemini-3.1-flash-lite', help: 'Any model OpenRouter offers. Prices include a small markup.' },
@@ -688,7 +688,7 @@ async function apiFetch(url, opts = {}, { label = 'Request', retries = 2, timeou
     let detail = '';
     try { const txt = await r.text(); try { const j = JSON.parse(txt); detail = j.error?.message || j.message || j.error || txt; } catch { detail = txt; } } catch {}
     detail = String(typeof detail === 'object' ? JSON.stringify(detail) : detail).slice(0, 300);
-    const hint = r.status === 401 || r.status === 403 ? ' Check the API key in Settings.' : r.status === 429 ? ' Rate limit reached; try again in a minute.' : '';
+    const hint = r.status === 401 || r.status === 403 ? ' Check the API key in Settings.' : r.status === 429 ? ' Rate limit reached; try again in a minute.' : r.status === 503 ? ' The service is busy; press Try again in a few minutes.' : '';
     throw new ApiError(`${label} failed (${r.status}). ${detail}${hint}`, r.status);
   }
 }
@@ -747,7 +747,7 @@ function geminiThinking(model) {
   if (/gemini-[3-9]/.test(model)) return { thinkingLevel: 'minimal' };
   return null;
 }
-async function geminiCall({ model, system, parts, schema, base, maxTokens = 32000, temperature = 0.2, extraGen = {} }) {
+async function geminiCallOnce({ model, system, parts, schema, base, maxTokens = 32000, temperature = 0.2, extraGen = {} }) {
   const key = await needKey('gemini');
   base = (base || PROVIDERS.llm.gemini.base).replace(/\/$/, '');
   let useSchema = !!schema, thinking = geminiThinking(model); extraGen = { ...extraGen };
@@ -762,7 +762,7 @@ async function geminiCall({ model, system, parts, schema, base, maxTokens = 3200
     try {
       const r = await apiFetch(`${base}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body),
-      }, { label: 'Gemini', retries: 3, timeout: 300000 });
+      }, { label: `Gemini (${model})`, retries: 2, timeout: 300000 });
       const j = await r.json();
       if (j.promptFeedback?.blockReason) throw new ApiError('Gemini blocked the request: ' + j.promptFeedback.blockReason);
       const cand = j.candidates?.[0];
@@ -775,6 +775,29 @@ async function geminiCall({ model, system, parts, schema, base, maxTokens = 3200
       if (e.status === 400 && extraGen.mediaResolution && /media_?resolution/i.test(e.message)) { delete extraGen.mediaResolution; continue; }
       if (e.status === 400 && useSchema && /schema|response_?schema|Unknown name/i.test(e.message)) { useSchema = false; continue; }
       throw e;
+    }
+  }
+}
+/* When a Gemini model is overloaded (503), out of free quota (429) or closed to this key (404),
+   fall back to another Flash-Lite-class model and remember the busy one for a while. */
+const GEMINI_FALLBACKS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash'];
+const geminiBusy = new Map();
+function isGeminiUnavailable(e) {
+  return e?.status === 503 || e?.status === 500 || e?.status === 429 || (e?.status === 404 && /no longer available|not found|not supported/i.test(e.message || ''));
+}
+async function geminiCall(opts) {
+  const tried = new Set(); let model = opts.model;
+  if ((geminiBusy.get(model) || 0) > Date.now()) { const alt = GEMINI_FALLBACKS.find(m => m !== model && (geminiBusy.get(m) || 0) <= Date.now()); if (alt) model = alt; }
+  for (;;) {
+    tried.add(model);
+    try { return await geminiCallOnce({ ...opts, model }); }
+    catch (e) {
+      if (!isGeminiUnavailable(e)) throw e;
+      geminiBusy.set(model, Date.now() + (e.status === 404 ? 864e5 : 10 * 60e3));
+      const next = GEMINI_FALLBACKS.find(m => !tried.has(m) && (geminiBusy.get(m) || 0) <= Date.now()) || GEMINI_FALLBACKS.find(m => !tried.has(m));
+      if (!next) throw e;
+      toast(`${model} is ${e.status === 404 ? 'not available to your key' : e.status === 429 ? 'out of quota right now' : 'overloaded right now'}; using ${next} instead.`);
+      model = next;
     }
   }
 }
