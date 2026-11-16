@@ -148,6 +148,26 @@ a{color:inherit}
 .telop .ten{color:#c8cee0;margin:.1rem 0 0;font-size:.98rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .telop.empty .telop-text{color:#9aa4bd;text-shadow:none;font-weight:500;font-size:1rem}
 .is-audio .telop{--telop-h:13.5rem}
+/* Theater view: one column, the video as large as the window allows, the current line under it and the next few below */
+.upnext{list-style:none;margin:0;padding:0 .6rem .5rem;display:none}
+.theater .upnext{display:block}
+.upnext li{height:3.1rem;border-top:1px solid rgba(255,255,255,.09)}
+.upnext button{display:grid;grid-template-columns:3.2rem minmax(0,1fr);align-items:center;column-gap:.5rem;width:100%;height:100%;padding:0 .5rem;background:none;border:0;border-radius:var(--r-s);color:#aab3ca;text-align:left;cursor:pointer;font:inherit}
+.upnext button:hover{background:rgba(255,255,255,.06);color:#e6eaf5}
+.upnext .ut{font-size:.75rem;color:#7d88a3;font-variant-numeric:tabular-nums}
+.upnext .uj{font-size:1rem;line-height:1.2;padding-top:.62rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upnext .ue{grid-column:2;font-size:.78rem;color:#7d88a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:-.15rem}
+.upnext li:nth-child(2){opacity:.8}.upnext li:nth-child(3){opacity:.62}
+.upnext .fr::before{color:#8f99b3}
+.upnext .empty{display:flex;align-items:center;height:100%;padding:0 .5rem;color:#7d88a3;font-size:.85rem}
+.trans-hide .upnext .ue{display:none}
+.trans-blur .upnext .ue{filter:blur(4px)}.trans-blur .upnext button:hover .ue{filter:none}
+.theater .stage{grid-template-columns:minmax(0,1fr);max-width:min(1700px,max(min(52vw,780px),calc((100dvh - var(--hdr,64px) - 26.5rem) * 16 / 9)))}
+.theater .stage.is-audio{max-width:900px}
+.theater .left{position:static;max-height:none;overflow:visible}
+.theater .right>*:not(#chunkState){display:none}
+.theater .telop{display:flex;--telop-h:7.6rem}
+.theater .telop .telop-text{line-height:1.9}
 .relink{padding:1rem 1.1rem;color:#e6e9f1;font-size:.92rem;border-top:1px solid var(--screen-2)}
 .relink .btn{margin-top:.5rem}
 .scrub-wrap{display:flex;align-items:center;gap:.6rem;font-size:.8rem;color:var(--mute);font-variant-numeric:tabular-nums}
@@ -282,6 +302,9 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
   .bar{position:relative}
   .left{position:sticky;top:0;z-index:8;background:var(--fog);padding:.4rem 0;gap:.45rem;max-height:none;overflow:visible}
   .is-yt .telop{display:none}
+  .theater .is-yt .telop{display:flex;--telop-h:7rem}
+  .theater .left{position:static}
+  .theater .stage{max-width:none}
   .is-audio .telop{--telop-h:9rem}
   .rail{top:auto;position:static}
   .shadow{max-height:40vh;overflow:auto}
@@ -379,6 +402,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
             <p class="ten" id="telopEn"></p>
           </div>
         </div>
+        <ol class="upnext" id="upNext" aria-label="Coming up" hidden></ol>
         <div class="relink" id="relink" hidden></div>
         <audio id="audioEl" preload="metadata" playsinline></audio>
       </div>
@@ -402,6 +426,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
         <div class="group">
           <div class="seg-ctl" role="group" aria-label="Furigana"><button type="button" id="furiBtn" title="Furigana: show / on hover / hide (F)">ふりがな</button></div>
           <div class="seg-ctl" role="group" aria-label="Translation"><button type="button" id="transBtn" title="Translation: show / blur / hide (T)">English</button></div>
+          <button class="btn small" id="theaterBtn" type="button" aria-pressed="false" title="Theater view: bigger video with the current line and what comes next (V)">Theater</button>
           <button class="btn small" id="shadowBtn" type="button" aria-pressed="false" title="Record &amp; compare (M)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>Shadow</button>
         </div>
@@ -528,7 +553,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
         </select><p class="help">Line times are estimates, so when you click, loop or shadow a line it starts a moment before its marked time and plays a moment past its end. Automatic uses 0.25 s.</p></div>
         <div class="field"><label for="chunkMin">Part length (min)</label><input id="chunkMin" type="number" min="5" max="60" step="5"><p class="help">Applies to newly added episodes.</p></div>
         <div class="check"><input type="checkbox" id="copyAudio"><label for="copyAudio">Copy audio files into the library folder (so other computers can play them)</label></div>
-        <p class="help" style="margin-top:.6rem">Shortcuts: Space play/pause · ← → previous/next sentence · R replay · L loop · P pause after each · F furigana · T translation · G grammar · M record</p>
+        <p class="help" style="margin-top:.6rem">Shortcuts: Space play/pause · V theater view · ← → previous/next sentence · R replay · L loop · P pause after each · F furigana · T translation · G grammar · M record</p>
       </fieldset>
     </div>
     <div class="dlg-foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" id="saveSettings" value="save" type="submit">Save</button></div>
@@ -654,7 +679,7 @@ const DEFAULTS = {
   llmProvider: 'gemini', llmModel: 'gemini-3.1-flash-lite', llmBase: '', llmConc: 2, level: 'N2 → N1',
   ytSource: 'auto', ytGeminiModel: 'gemini-3.1-flash-lite',
   autoProcess: true, prefetch: false, chunkMin: 30, copyAudio: false,
-  furi: 'show', trans: 'show', pauseAfter: false, rate: 1, follow: true, shadowMode: 'after', leadIn: 'auto', ytPasses: '1',
+  furi: 'show', trans: 'show', pauseAfter: false, rate: 1, follow: true, shadowMode: 'after', leadIn: 'auto', ytPasses: '1', theater: false,
 };
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -2545,6 +2570,7 @@ function lineNode(s, k) {
   return li;
 }
 function renderLines(append) {
+  queueMicrotask(() => { const o = $('#upNext'); if (o) o.dataset.sig = ''; updateUpNext(); });
   const ol = $('#lines'), ch = curChunk();
   const tag = ch && App.ep ? `${App.ep.id}:${ch.i}` : '';
   const sents = ch?.sentences || [];
@@ -2569,9 +2595,34 @@ function setActive(k) {
   const tj = $('#telopJa'), te = $('#telopEn'), tp = $('#telop');
   if (s) { tp.classList.remove('empty'); tj.innerHTML = furiHtml(s.f); te.textContent = s.en || ''; }
   else { tp.classList.add('empty'); tj.textContent = curChunk()?.sentences?.length ? '…' : (App.ep ? 'Press play' : ''); te.textContent = ''; }
-  fitTelop();
-  if (li && S.follow && Date.now() - App.userScroll > 3500) followLine(li);
+  fitTelop(); updateUpNext();
+  if (li && S.follow && !S.theater && Date.now() - App.userScroll > 3500) followLine(li);
   if ($('#shadowPanel').hidden === false && !Shadow.busy && !Shadow.blob) Shadow.setSentence(s);
+}
+/* Theater view: the next few lines under the current one. Three fixed rows, so nothing moves as lines change. */
+function updateUpNext() {
+  const ol = $('#upNext'); if (!ol) return;
+  const on = !!S.theater && !!App.ep; ol.hidden = !on; if (!on) return;
+  const sents = curSentences();
+  let from = App.active >= 0 ? App.active + 1 : sentenceAt(sents, (App.player?.time() || 0) - (App.ep.sync || 0)) + 1;
+  const sig = `${App.ep.id}:${App.chunkIdx}:${from}:${sents.length}`; if (ol.dataset.sig === sig) return; ol.dataset.sig = sig;
+  ol.innerHTML = '';
+  for (let n = 0; n < 3; n++) {
+    const k = from + n, x = sents[k], li = el('li');
+    if (x) li.append(el('button', { type: 'button', 'data-k': k, title: 'Play from this line' },
+      el('span', { class: 'ut' }, fmt(x.s)), el('span', { class: 'uj ja', lang: 'ja', html: furiHtml(x.f) }), x.en ? el('span', { class: 'ue' }, x.en) : null));
+    else if (n === 0) li.append(el('div', { class: 'empty' }, !sents.length ? 'No lines for this part yet.' : App.ep.chunks[App.chunkIdx + 1] ? 'The next part follows.' : 'End of the transcript.'));
+    ol.append(li);
+  }
+}
+function setTheater(on) {
+  S.theater = !!on; saveSettings();
+  document.body.classList.toggle('theater', S.theater && !!App.ep);
+  $('#theaterBtn').setAttribute('aria-pressed', S.theater ? 'true' : 'false');
+  const ol = $('#upNext'); if (ol) ol.dataset.sig = '';
+  updateUpNext(); fitTelop();
+  if (!S.theater) { const li = lineEl(App.active); if (li) followLine(li); }
+  else window.scrollTo({ top: 0 });
 }
 /* The subtitle band has a fixed height; long sentences shrink to fit instead of pushing the controls down. */
 function fitTelop() {
@@ -2628,7 +2679,7 @@ function setRate(r) {
 }
 
 /* ---------- open / close episodes ---------- */
-function showStage(on) { $('#welcome').hidden = on; $('#stage').hidden = !on; }
+function showStage(on) { $('#welcome').hidden = on; $('#stage').hidden = !on; document.body.classList.toggle('theater', on && !!S.theater); $('#theaterBtn')?.setAttribute('aria-pressed', S.theater ? 'true' : 'false'); }
 function closeEpisode({ save = true } = {}) {
   if (save && App.ep && App.player) { App.ep.pos = App.player.time(); App.ep.posAt = Date.now(); saveEpisode(App.ep, { bump: false }).catch(() => {}); }
   App.player?.destroy(); App.player = null; App.ep = null; App.chunkIdx = -1; App.active = -1;
@@ -3116,6 +3167,8 @@ function wire() {
   sc.addEventListener('input', () => { $('#tCur').textContent = fmt(+sc.value); });
   sc.addEventListener('change', () => seekTo(+sc.value));
   // shadow
+  $('#theaterBtn').addEventListener('click', () => setTheater(!S.theater));
+  $('#upNext').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) playSentence(+b.dataset.k); });
   $('#recBtn').addEventListener('click', () => Shadow.record());
   $('#playOrigBtn').addEventListener('click', () => Shadow.playOrig());
   $('#playMineBtn').addEventListener('click', () => Shadow.playMine());
@@ -3149,6 +3202,7 @@ function wire() {
       l: () => $('#loopBtn').click(), p: () => $('#pauseAfterBtn').click(), f: () => $('#furiBtn').click(), t: () => $('#transBtn').click(),
       g: () => { const li = lineEl(App.active); if (li) toggleGrammar(li, App.active); },
       m: () => { openShadow(true); Shadow.record(); },
+      v: () => setTheater(!S.theater),
     };
     if (map[k]) { e.preventDefault(); map[k](); }
   });
