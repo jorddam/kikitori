@@ -644,7 +644,25 @@ function fmt(t) {
 function fnv(str) { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); }
 const slug = s => String(s || 'episode').normalize('NFKC').replace(/[\\/:*?"<>|#%{}^~[\]`]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'episode';
 const FURI_RE = /\{([^{}|]+)\|([^{}]+)\}/g;
-const cleanFuri = f => String(f ?? '').replace(/\{([^{}|]+)\|\s*\}/g, '$1').replace(/\{([^{}|]+)\}/g, '$1');
+const KANJI_RE = /[一-龯々〆ヵヶ]/, KANA_ONLY = /^[ぁ-ゖー]+$/;
+/* Normalises furigana markup to {漢字|かんじ}. Models sometimes write readings in parentheses, nest braces,
+   add a second reading, or put braces around kana; all of those are repaired or dropped here, so stored
+   lines made before a fix also display correctly. */
+function cleanFuri(f) {
+  f = String(f ?? '');
+  if (!/[{}|(（〈《〔［\[]/.test(f)) return f;
+  f = f.replace(/([一-龯々〆ヵヶ]+)[(（〈《〔［\[]([ぁ-ゖー]+)[)）〉》〕］\]]/g, '{$1|$2}');   // 漢字(かんじ), 漢字〈かんじ〉, 漢字《かんじ》 → {漢字|かんじ}
+  for (let i = 0; i < 3; i++) f = f.replace(/\{([^{}]*?)(\{[^{}|]+\|[^{}]+\})([^{}]*?)\}/g, (m, x, g, y) => x.replace(/\|.*$/, '') + g + y.replace(/\|.*$/, ''));   // {閉じ{込|こ}め}
+  f = f.replace(/\{([^{}|]*)((?:\|[^{}|]*)+)\}/g, (m, base, rest) => {
+    const rs = rest.split('|').filter(Boolean), r = [...rs].reverse().find(x => KANA_ONLY.test(x));
+    if (!base) return rs[0] || '';
+    if (!r || r === base || !KANJI_RE.test(base)) return base;
+    return `{${base}|${r}}`;
+  });
+  f = f.replace(/\{([^{}|]+)\}/g, '$1');
+  f = f.replace(/(\{[^{}|]+\|[^{}]+\})|\|[ぁ-ゖー]*|[{}]/g, (m, g) => g || '');                // stray pipes and braces
+  return f;
+}
 function furiHtml(f) {
   f = cleanFuri(f); let out = '', last = 0;
   for (const m of f.matchAll(FURI_RE)) { out += escHtml(f.slice(last, m.index)) + `<span class="fr" data-r="${escHtml(m[2])}">${escHtml(m[1])}</span>`; last = m.index + m[0].length; }
@@ -1008,7 +1026,7 @@ Lines
 Japanese text ("f"): word for word
 - Write exactly what was said: keep every filler and interjection (あの, えっと, ええと, まあ, ね, なんか, はい), every repetition, casual contractions and unfinished phrasing. Do not paraphrase, shorten, tidy, summarise or correct grammar. Do not swap words for synonyms.
 - You may add punctuation, and you may fix a word only when it is clearly a speech-recognition mistake. Leave out only non-speech markers such as [音楽].
-- Furigana: write each word that contains kanji as {漢字|かんじ}. Braces wrap only the kanji, the reading is hiragana, okurigana stays outside: {食|た}べる, {勉強|べんきょう}する, {今日|きょう}, {一人|ひとり}. Never put braces around hiragana or katakana, and never write braces without a reading.
+- Furigana: write each word that contains kanji as {漢字|かんじ}. Braces wrap only the kanji, the reading is hiragana, okurigana stays outside: {食|た}べる, {勉強|べんきょう}する, {今日|きょう}, {一人|ひとり}. One reading per word, no braces inside braces. Never put braces around hiragana or katakana, never write braces without a reading, and never write a reading in parentheses or brackets such as （）, 〈〉 or 《》.
 
 English ("e"): a natural, faithful translation of that line. Fillers may be left out in English.
 
@@ -1024,14 +1042,14 @@ Input: one continuous stretch of transcribed speech. It may have little or no pu
 Return JSON: {"s":[{"f":"…","e":"…","v":[{"w":"…","r":"…","m":"…"}]}]}
 
 Lines
-- Divide the speech into lines, in order, covering all of it. One line is one spoken sentence or one short reply. Break at every place a sentence ends (after です, ます, よね, かな, だ, a question, or an interjection like はい or うわっ that stands alone).
-- A line is at most about 30 characters. Split a longer sentence at a natural pause (after けど, から, て, し, が, ので and similar). Never end a line in the middle of a word or number.
-- Never join two sentences into one line.
+- Divide the speech into lines, in order, covering all of it. A line should be comfortable to read while listening: aim for about 15 to 35 characters, roughly 2 to 5 seconds of speech.
+- A line ends where a sentence ends. Keep a short reply, interjection or tag (はい, そうですね, うわっ, ね, 次は？) on the same line as the sentence it goes with or the one right next to it; do not give very short utterances a line of their own unless a clear pause separates them from everything else.
+- Two short sentences may share a line when together they stay under about 35 characters. Never put more than about 40 characters on a line: split a longer sentence at a natural pause (after けど, から, て, し, が, ので and similar). Never end a line in the middle of a word or number.
 
 Japanese text ("f"): word for word
 - Keep every word exactly as given, in the same order: fillers, repetitions, casual contractions, unfinished phrasing. Do not paraphrase, drop, tidy, reorder or swap words for synonyms. Fix a word only when it is clearly a recognition mistake.
 - Add natural punctuation (、。？！).
-- Furigana: write each word that contains kanji as {漢字|かんじ}. Braces wrap only the kanji, the reading is hiragana, okurigana stays outside: {食|た}べる, {勉強|べんきょう}する, {今日|きょう}. Never put braces around hiragana or katakana, and never write braces without a reading.
+- Furigana: write each word that contains kanji as {漢字|かんじ}. Braces wrap only the kanji, the reading is hiragana, okurigana stays outside: {食|た}べる, {勉強|べんきょう}する, {今日|きょう}. One reading per word, no braces inside braces. Never put braces around hiragana or katakana, never write braces without a reading, and never write a reading in parentheses or brackets such as （）, 〈〉 or 《》.
 
 English ("e"): a natural, faithful translation of that line. Fillers may be left out in English.
 
@@ -2233,6 +2251,33 @@ function retimeByWords(cues, sents) {
   for (let k = 1; k < res.length; k++) { if (res[k].s < res[k - 1].s) res[k].s = +(res[k - 1].s + 0.05).toFixed(2); if (res[k - 1].e > res[k].s) res[k - 1].e = res[k].s; if (res[k].e < res[k].s + 0.2) res[k].e = +(res[k].s + 0.2).toFixed(2); }
   return res;
 }
+/* Very short lines flash by too fast to read. A short line joins a neighbour when they are spoken back to back
+   and the result is still a comfortable length. Lines separated by a real pause are left alone. */
+function mergeShortLines(sents, { maxChars = 42, maxDur = 8, gap = 0.6 } = {}) {
+  const len = x => [...plainOf(x.f)].length, short = x => x.e - x.s < 1.6 || len(x) < 9;
+  const join = (a, b) => {
+    const v = []; for (const w of [...(a.v || []), ...(b.v || [])]) if (!v.some(o => o.w === w.w)) v.push(w);
+    const o = { ...a, e: b.e, f: a.f + b.f, en: [a.en, b.en].filter(Boolean).join(' '), v: v.slice(0, 4) };
+    if (a.loose || b.loose) o.loose = true; return o;
+  };
+  const fits = (a, b) => b.s - a.e < gap && len(a) + len(b) <= maxChars && b.e - a.s <= maxDur && !a.raw && !b.raw;
+  const out = sents.map(x => ({ ...x }));
+  for (let pass = 0; pass < 3; pass++) {
+    let changed = false;
+    for (let i = 0; i < out.length; i++) {
+      if (!short(out[i])) continue;
+      const prev = out[i - 1], next = out[i + 1];
+      const canPrev = prev && fits(prev, out[i]), canNext = next && fits(out[i], next);
+      if (!canPrev && !canNext) continue;
+      // join the closer neighbour; on a tie prefer the shorter result
+      const usePrev = canPrev && (!canNext || out[i].s - prev.e < next.s - out[i].e || (out[i].s - prev.e === next.s - out[i].e && len(prev) <= len(next)));
+      if (usePrev) { out.splice(i - 1, 2, join(prev, out[i])); i--; } else out.splice(i, 2, join(out[i], next));
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return out;
+}
 async function annotateBatch(ep, cues, prevText, usage) {
   const wordTimed = cues.length > 0 && cues.filter(c => c.w?.length).length >= cues.length * 0.8;
   const head = `Episode: ${ep.title || 'untitled'}\n${prevText ? `Previous line (context only, do not repeat it): ${prevText}\n` : ''}`;
@@ -2249,7 +2294,8 @@ async function annotateBatch(ep, cues, prevText, usage) {
     const r2 = again ? verbatimRatio(cues, again) : 0;
     if (r2 > ratio) { raw = again; ratio = r2; }
   }
-  const out = retimeByWords(cues, timeSentences(cues, raw));
+  let out = retimeByWords(cues, timeSentences(cues, raw));
+  if (wordTimed) out = mergeShortLines(out);
   if (ratio < 0.8) out.forEach(x => { x.loose = true; });
   return out;
 }
