@@ -151,7 +151,7 @@ a{color:inherit}
 /* Theater view: one column, the video as large as the window allows, the current line under it and the next few below */
 .upnext{list-style:none;margin:0;padding:0 .6rem .5rem;display:none}
 .theater .upnext{display:block}
-.upnext li{height:3.1rem;border-top:1px solid rgba(255,255,255,.09)}
+.upnext li{height:3rem;border-top:1px solid rgba(255,255,255,.09)}
 .upnext button{display:grid;grid-template-columns:3.2rem minmax(0,1fr);align-items:center;column-gap:.5rem;width:100%;height:100%;padding:0 .5rem;background:none;border:0;border-radius:var(--r-s);color:#aab3ca;text-align:left;cursor:pointer;font:inherit}
 .upnext button:hover{background:rgba(255,255,255,.06);color:#e6eaf5}
 .upnext .ut{font-size:.75rem;color:#7d88a3;font-variant-numeric:tabular-nums}
@@ -162,7 +162,11 @@ a{color:inherit}
 .upnext .empty{display:flex;align-items:center;height:100%;padding:0 .5rem;color:#7d88a3;font-size:.85rem}
 .trans-hide .upnext .ue{display:none}
 .trans-blur .upnext .ue{filter:blur(4px)}.trans-blur .upnext button:hover .ue{filter:none}
-.theater .stage{grid-template-columns:minmax(0,1fr);max-width:min(1700px,max(min(52vw,780px),calc((100dvh - var(--hdr,64px) - 26.5rem) * 16 / 9)))}
+.theater .bar{display:none}
+.theater .stage{grid-template-columns:minmax(0,1fr);padding-top:.6rem;gap:.6rem;max-width:min(1700px,max(560px,calc((100dvh - 22.9rem) * 16 / 9)))}
+.theater .left{gap:.5rem}
+.theater .transport .hide-sm,.theater .transport .lbl,.theater #speedCtl{display:none}
+.theater .speed-sel{display:inline-block}
 .theater .stage.is-audio{max-width:900px}
 .theater .left{position:static;max-height:none;overflow:visible}
 .theater .right>*:not(#chunkState){display:none}
@@ -305,6 +309,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
   .theater .is-yt .telop{display:flex;--telop-h:7rem}
   .theater .left{position:static}
   .theater .stage{max-width:none}
+  .theater .bar{display:flex}
   .is-audio .telop{--telop-h:9rem}
   .rail{top:auto;position:static}
   .shadow{max-height:40vh;overflow:auto}
