@@ -481,7 +481,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
         <div class="field"><label for="k_groq">Groq</label><div class="keyrow"><input id="k_groq" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_…"><button class="btn small" type="button" data-test="groq">Test</button></div><p class="help">Speech-to-text with Whisper. Free tier available at console.groq.com.</p></div>
         <div class="field"><label for="k_gemini">Google Gemini</label><div class="keyrow"><input id="k_gemini" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…"><button class="btn small" type="button" data-test="gemini">Test</button></div><p class="help">Translations, furigana, grammar, and YouTube transcription without captions. Restrict the key to your site's URL in Google Cloud Console.</p></div>
         <div class="field"><label for="k_supadata">Supadata</label><div class="keyrow"><input id="k_supadata" type="password" autocomplete="off" spellcheck="false"></div><p class="help">Optional. Fetches existing YouTube captions (1 credit per video, 100 free each month).</p></div>
-        <div class="field"><label for="k_deapi">deAPI</label><div class="keyrow"><input id="k_deapi" type="password" autocomplete="off" spellcheck="false"></div><p class="help">Optional. Runs Whisper on a YouTube video's real audio, so each line is timed from the sound itself. Free starting credit at deapi.ai.</p></div>
+        <div class="field"><label for="k_gladia">Gladia</label><div class="keyrow"><input id="k_gladia" type="password" autocomplete="off" spellcheck="false"></div><p class="help">Times YouTube videos from their real audio, word by word. About 32 cents per hour of video, charged once per video for its full length; new accounts start with free credit at app.gladia.io.</p></div>
         <div class="field"><label for="k_openai">OpenAI</label><div class="keyrow"><input id="k_openai" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…"><button class="btn small" type="button" data-test="openai">Test</button></div></div>
         <div class="field"><label for="k_openrouter">OpenRouter</label><div class="keyrow"><input id="k_openrouter" type="password" autocomplete="off" spellcheck="false"><button class="btn small" type="button" data-test="openrouter">Test</button></div></div>
         <div class="field"><label for="k_custom">Custom endpoint</label><div class="keyrow"><input id="k_custom" type="password" autocomplete="off" spellcheck="false"></div><p class="help">For any OpenAI-compatible service or your own proxy.</p></div>
@@ -509,7 +509,7 @@ details.adv>summary{cursor:pointer;color:var(--mute);font-size:.88rem;margin:.6r
       </fieldset>
       <fieldset>
         <legend>YouTube transcripts</legend>
-        <div class="field"><label for="ytSource">Source</label><select id="ytSource"><option value="auto">Captions first, then Gemini</option><option value="supadata">Captions only (Supadata)</option><option value="gemini">Gemini only</option><option value="deapi">deAPI Whisper (timed from the audio)</option></select><p class="help">Captions are fetched once per video. Gemini listens to the video itself (public videos only) and usually costs a few cents per part; since August 2026 some accounts are billed for the whole video's audio on each request, which makes very long videos pricier. You can also import a subtitle file or attach your own audio from the episode's More menu.</p></div>
+        <div class="field"><label for="ytSource">Source</label><select id="ytSource"><option value="auto">Best available: Gladia, then captions, then Gemini</option><option value="gladia">Gladia (timed from the audio, word by word)</option><option value="supadata">YouTube captions only (Supadata)</option><option value="gemini">Gemini only (free, timing within a second or two)</option></select><p class="help">Captions are fetched once per video. Gemini listens to the video itself (public videos only) and usually costs a few cents per part; since August 2026 some accounts are billed for the whole video's audio on each request, which makes very long videos pricier. You can also import a subtitle file or attach your own audio from the episode's More menu.</p></div>
         <div class="field"><label for="ytGeminiModel">Gemini model</label><input id="ytGeminiModel" list="geminiModels" spellcheck="false"><datalist id="geminiModels"><option value="gemini-3.1-flash-lite"><option value="gemini-3.5-flash-lite"><option value="gemini-flash-lite-latest"><option value="gemini-3.8-flash"></datalist></div>
       </fieldset>
       <fieldset>
@@ -642,8 +642,9 @@ const PROVIDERS = {
     custom: { base: '', key: 'custom', models: [], def: '', help: 'Any OpenAI-compatible /chat/completions endpoint.' },
   },
 };
+const GLADIA_RATE_PRICE = 0.32;
 const PRICE = {
-  stt: { 'deapi:WhisperLargeV3Ct2': 0.0315, 'whisper-large-v3-turbo': 0.04, 'whisper-large-v3': 0.111, 'whisper-1': 0.36 },
+  stt: { 'gladia:solaria-1': GLADIA_RATE_PRICE, 'whisper-large-v3-turbo': 0.04, 'whisper-large-v3': 0.111, 'whisper-1': 0.36 },
   llm: { 'gemini-2.5-flash-lite': [0.10, 0.40], 'gemini-3.1-flash-lite': [0.25, 1.50], 'gemini-3.5-flash-lite': [0.30, 2.50], 'gemini-3.8-flash': [0.75, 3.75],
     'gpt-5-nano': [0.05, 0.40], 'gpt-5-mini': [0.25, 2.00], 'gpt-4.1-mini': [0.40, 1.60], 'gpt-4o-mini': [0.15, 0.60], 'openai/gpt-oss-120b': [0.15, 0.60] },
   geminiAudio: { 'gemini-2.5-flash-lite': 0.30, 'gemini-3.1-flash-lite': 0.50, 'gemini-3.5-flash-lite': 0.30, 'gemini-3.8-flash': 0.75 },
@@ -664,7 +665,7 @@ const S = Object.assign({}, DEFAULTS, LS.get('kikitori.settings', {}));
 const saveSettings = () => LS.set('kikitori.settings', S);
 
 /* ---------- API keys (optionally passphrase-encrypted) ---------- */
-const KEY_LABEL = { groq: 'Groq', openai: 'OpenAI', gemini: 'Google Gemini', supadata: 'Supadata', deapi: 'deAPI', openrouter: 'OpenRouter', custom: 'custom endpoint', github: 'GitHub sync' };
+const KEY_LABEL = { groq: 'Groq', openai: 'OpenAI', gemini: 'Google Gemini', supadata: 'Supadata', gladia: 'Gladia', openrouter: 'OpenRouter', custom: 'custom endpoint', github: 'GitHub sync' };
 const b64 = u8 => btoa(String.fromCharCode(...new Uint8Array(u8)));
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function deriveKey(pass, salt) {
@@ -787,7 +788,7 @@ function usageRows(u) {
   return Object.entries(u || {}).map(([k, r]) => {
     const cost = usageCost(k, r);
     const what = k === 'supadata' ? `Supadata captions: ${r.credits} credit${r.credits === 1 ? '' : 's'}`
-      : k.startsWith('stt:') ? `Whisper (${k.slice(4)}): ${Math.round(r.seconds / 60)} min of audio, ${r.calls} request${r.calls === 1 ? '' : 's'}`
+      : k.startsWith('stt:') ? `Speech-to-text (${k.slice(4)}): ${Math.round(r.seconds / 60)} min of audio, ${r.calls} request${r.calls === 1 ? '' : 's'}`
       : `${k}: ${r.calls} request${r.calls === 1 ? '' : 's'}, ${fmtTok(r.in)} tokens in${r.audio ? ` (${fmtTok(r.audio)} audio)` : ''}, ${fmtTok(r.out)} out`;
     return { k, what, cost };
   });
@@ -1156,90 +1157,58 @@ One segment per sentence or short phrase, at most about 10 seconds each, in orde
   all.rough = rough; all.checked = twice;
   return all;
 }
-/* ---------- deAPI: Whisper on the video's real audio (word-level timing) ---------- */
-const DEAPI = 'https://api.deapi.ai/api/v2';
-function deapiError(status, j) {
-  const msg = j?.message || j?.error_reason || (j?.errors ? JSON.stringify(j.errors) : '');
-  if (status === 401) return new UserError('deAPI rejected the key. Check it in Settings.', 'settings');
-  if (status === 402 || j?.code === 'insufficient_balance') return new UserError('Your deAPI balance has run out.');
-  return new ApiError(`deAPI failed (${status})${msg ? ': ' + msg : ''}`, status);
+/* ---------- Gladia: transcribes a YouTube video from its real audio, with a time for every word ---------- */
+const GLADIA_RATE = GLADIA_RATE_PRICE;   // per hour of video, measured on a real run
+const needsGladia = ep => ep.kind === 'youtube' && !ep.hasAudio && !ep.source?.captions?.cues?.length && ytPath() === 'gladia';
+function ytPath() {
+  if (S.ytSource === 'gladia' || S.ytSource === 'gemini') return S.ytSource;
+  if (S.ytSource === 'supadata') return 'captions';
+  return hasKey('gladia') ? 'gladia' : hasKey('supadata') ? 'captions' : 'gemini';
 }
-/* The result format isn't documented in detail, so accept the shapes Whisper services commonly return. */
-function deapiCues(result) {
-  let r = result;
-  if (typeof r === 'string') { const t = r.trim(); if (t.startsWith('{') || t.startsWith('[')) { try { r = JSON.parse(t); } catch { r = t; } } }
-  const num = v => typeof v === 'number' ? v : parseTs(v);
-  const unit = o => {
-    if (!o || typeof o !== 'object') return null;
-    let s = o.start ?? o.s ?? o.from ?? o.start_time ?? o.begin, e = o.end ?? o.e ?? o.to ?? o.end_time;
-    if (s == null && Array.isArray(o.timestamp)) [s, e] = o.timestamp;
-    const t = o.text ?? o.word ?? o.char ?? o.t ?? o.content;
-    s = num(s); e = num(e);
-    return isFinite(s) && typeof t === 'string' ? { s, e: isFinite(e) ? e : s, t } : null;
-  };
-  const arrays = [];
-  (function walk(v, key, depth) {
-    if (!v || typeof v !== 'object' || depth > 5) return;
-    if (Array.isArray(v)) { if (v.length && unit(v[0])) arrays.push({ key, items: v }); else v.slice(0, 3).forEach(x => walk(x, key, depth + 1)); return; }
-    for (const [k, x] of Object.entries(v)) walk(x, k, depth + 1);
-  })(r, '', 0);
-  if (typeof r === 'string') {            // "[0:00 - 0:04]  text" lines
-    const cues = []; const re = /\[\s*([\d:.]+)\s*[-–>]+\s*([\d:.]+)\s*\]\s*([^\[]*)/g; let m;
-    while ((m = re.exec(r))) cues.push({ s: parseTs(m[1]), e: parseTs(m[2]), t: m[3].replace(/\s+/g, ' ').trim() });
-    return { cues: tidyCues(cues), words: 0 };
-  }
-  const isWords = a => /word|char/i.test(a.key) || a.items.slice(0, 40).every(x => [...String(unit(x)?.t || '').trim()].length <= 4);
-  const segArr = arrays.find(a => !isWords(a)), wordArr = arrays.find(isWords);
-  let words = wordArr ? wordArr.items.map(unit).filter(Boolean).map(w => ({ ...w, t: w.t.trim() })).filter(w => w.t) : [];
-  let segs = segArr ? segArr.items.map((x, i) => { const u = unit(x); if (!u) return null; const inner = Array.isArray(x.words) ? x.words.map(unit).filter(Boolean).map(w => ({ ...w, t: w.t.trim() })).filter(w => w.t) : null; return { ...u, t: u.t.trim(), w: inner }; }).filter(u => u && u.t) : [];
-  if (!words.length) words = segs.flatMap(x => x.w || []);
-  if (!segs.length && words.length) {     // only words: cut lines at pauses, sentence ends, or length
-    let cur = null;
-    for (const w of words) {
-      if (cur && (w.s - cur.e > 0.6 || /[。？！?!]$/.test(cur.t) || [...cur.t].length >= 40)) { segs.push(cur); cur = null; }
-      if (!cur) cur = { s: w.s, e: w.e, t: '', w: [] };
-      cur.t += w.t; cur.e = Math.max(cur.e, w.e); cur.w.push(w);
+function gladiaCues(utterances) {
+  const cues = [];
+  for (const u of utterances || []) {
+    const ws = (u.words || []).map(w => ({ t: String(w.word ?? '').trim(), s: +(+w.start).toFixed(3), e: +(+w.end).toFixed(3) })).filter(w => w.t && isFinite(w.s));
+    if (!ws.length) { const t = cleanCueText(String(u.text || '')); if (t && isFinite(+u.start)) cues.push({ s: +u.start, e: +u.end || +u.start + 2, t }); continue; }
+    let cur = [], len = 0;
+    const flush = () => { if (cur.length) { cues.push({ s: cur[0].s, e: cur[cur.length - 1].e, t: cur.map(w => w.t).join(''), w: cur }); cur = []; len = 0; } };
+    for (const w of ws) {
+      if (cur.length) { const gap = w.s - cur[cur.length - 1].e; if (gap >= 0.25 || (len >= 12 && gap >= 0.08) || len >= 24) flush(); }
+      cur.push(w); len += [...w.t].length;
     }
-    if (cur) segs.push(cur);
+    flush();
   }
-  const cues = segs.sort((a, b) => a.s - b.s).map(x => {
-    const w = x.w?.length ? x.w : words.filter(v => v.s >= x.s - 0.05 && v.s < x.e + 0.05);
-    const c = { s: w.length ? Math.min(x.s, w[0].s) : x.s, e: x.e > x.s ? x.e : (w.length ? w[w.length - 1].e : x.s + 2), t: cleanCueText(x.t) };
-    if (w.length) c.w = w.map(v => ({ t: v.t, s: v.s, e: v.e }));
-    return c;
-  }).filter(c => c.t);
-  return { cues, words: words.length };
+  return cues.sort((x, y) => x.s - y.s);
 }
-async function deapiTranscribe(ep, prog, usage) {
-  const key = await needKey('deapi');
-  const headers = { Authorization: 'Bearer ' + key, Accept: 'application/json' };
-  const form = new FormData();
-  form.append('source_url', `https://www.youtube.com/watch?v=${ep.ytId}`);
-  form.append('model', 'WhisperLargeV3Ct2'); form.append('include_ts', 'true'); form.append('ts_level', 'word');
-  form.append('lang', 'ja'); form.append('return_result_in_response', 'true');
-  prog?.('Sending the video to Whisper…', 0.03);
-  let r; try { r = await fetch(`${DEAPI}/audio/transcriptions`, { method: 'POST', headers, body: form }); } catch { throw new ApiError('Couldn\'t reach deAPI. Check your connection.'); }
-  let j = await r.json().catch(() => ({}));
-  if (!r.ok) throw deapiError(r.status, j);
-  const id = j.data?.request_id || j.request_id; if (!id) throw new ApiError('deAPI didn\'t return a job id.');
-  const t0 = Date.now(); let data = null;
-  while (Date.now() - t0 < 20 * 60e3) {
+async function gladiaTranscribe(ep, prog, usage) {
+  const key = await needKey('gladia');
+  const fail = (status, j) => {
+    const msg = j?.message || j?.error || '';
+    if (status === 401 || status === 403) return new UserError('Gladia rejected the key. Check it in Settings.', 'settings');
+    if (status === 402) return new UserError('Your Gladia credit has run out.');
+    return new ApiError(`Gladia failed (${status})${msg ? ': ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)) : ''}`, status);
+  };
+  prog?.('Sending the video to Gladia…', 0.03);
+  let r; try { r = await fetch('https://api.gladia.io/v2/pre-recorded', { method: 'POST', headers: { 'x-gladia-key': key, 'Content-Type': 'application/json' }, body: JSON.stringify({ audio_url: `https://www.youtube.com/watch?v=${ep.ytId}`, language_config: { languages: ['ja'], code_switching: false } }) }); }
+  catch { throw new ApiError('Couldn\'t reach Gladia. Check your connection.'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw fail(r.status, j);
+  if (!j.id) throw new ApiError('Gladia didn\'t return a job id.');
+  const t0 = Date.now(); let done = null;
+  while (Date.now() - t0 < 30 * 60e3) {
     await sleep(4000);
-    let rr; try { rr = await fetch(`${DEAPI}/jobs/${encodeURIComponent(id)}`, { headers, cache: 'no-store' }); } catch { continue; }
-    const jj = await rr.json().catch(() => ({}));
-    if (!rr.ok && rr.status !== 429) throw deapiError(rr.status, jj);
-    const d = jj.data || jj; const st = String(d.status || '').toLowerCase();
-    if (st === 'done' || st === 'completed') { data = d; break; }
-    if (st === 'error' || st === 'failed') throw new ApiError('Whisper couldn\'t transcribe this video: ' + (d.error_reason || d.message || 'failed'));
-    prog?.(`Whisper is transcribing the audio… ${Math.round((Date.now() - t0) / 1000)} s`, Math.min(0.3, 0.04 + (Date.now() - t0) / 600e3));
+    let rr; try { rr = await fetch(`https://api.gladia.io/v2/pre-recorded/${encodeURIComponent(j.id)}`, { headers: { 'x-gladia-key': key }, cache: 'no-store' }); } catch { continue; }
+    if (rr.status === 429 || rr.status >= 500) continue;
+    const d = await rr.json().catch(() => ({}));
+    if (!rr.ok) throw fail(rr.status, d);
+    if (d.status === 'done') { done = d; break; }
+    if (d.status === 'error') throw new ApiError('Gladia couldn\'t transcribe this video' + (d.error_code ? ` (${d.error_code})` : '') + '. Very long or private videos can fail.');
+    prog?.(`Gladia is transcribing the whole video… ${Math.round((Date.now() - t0) / 1000)} s`, Math.min(0.3, 0.04 + (Date.now() - t0) / 400e3));
   }
-  if (!data) throw new ApiError('deAPI took too long. Try again in a few minutes.');
-  let result = data.result ?? data.transcription ?? data.output ?? null;
-  if (result == null && data.result_url) { try { result = await (await fetch(data.result_url)).text(); } catch { throw new ApiError('deAPI finished but its result file couldn\'t be downloaded from this page.'); } }
-  if (window.__kikitoriDebug) window.__kikitoriDebug.deapi = { data, result };
-  const { cues, words } = deapiCues(result);
-  if (!cues.length) throw new ApiError('Whisper found no speech in this video.');
-  Usage.add({ kind: 'stt', model: 'deapi:WhisperLargeV3Ct2', seconds: ep.duration || cues[cues.length - 1].e }, usage);
+  if (!done) throw new ApiError('Gladia took too long. Try again in a few minutes.');
+  const cues = gladiaCues(done.result?.transcription?.utterances);
+  if (!cues.length) throw new ApiError('Gladia found no speech in this video.');
+  Usage.add({ kind: 'stt', model: 'gladia:solaria-1', seconds: +done.result?.metadata?.billing_time || +done.result?.metadata?.audio_duration || ep.duration || 0 }, usage);
   return cues;
 }
 function parseSubtitles(text) {
@@ -2056,10 +2025,7 @@ function estimateCost(ep, ch) {
 function transcriptPath(ep) {
   if (ep.source?.captions?.cues?.length) return 'captions';
   if (ep.kind === 'audio' || ep.hasAudio) return 'stt';
-  if (S.ytSource === 'deapi') return 'captions';
-  if (S.ytSource === 'gemini') return 'gemini';
-  if (S.ytSource === 'supadata') return 'captions';
-  return hasKey('supadata') ? 'captions' : 'gemini';
+  const p = ytPath(); return p === 'gemini' ? 'gemini' : 'captions';
 }
 function setProgress(key, msg, frac) { App.progress.set(key, { msg, frac }); if (App.ep && key === `${App.ep.id}:${App.chunkIdx}`) renderChunkState(); }
 async function getAudioBlob(ep) {
@@ -2074,14 +2040,14 @@ async function cuesFor(ep, ch, prog, usage) {
   if (ep.kind === 'audio' && !blob) throw new UserError('The audio file for this episode isn\'t on this device. Use "Locate audio file" above the transcript.');
   if (blob) return await sttChunk(ep, ch, blob, prog, usage);
   // YouTube
-  if (S.ytSource === 'deapi') {
-    const cues = await deapiTranscribe(ep, prog, usage);
-    ep.source = { ...(ep.source || {}), captions: { provider: 'deapi', at: Date.now(), cues } };
+  if (ytPath() === 'gladia') {
+    const cues = await gladiaTranscribe(ep, prog, usage);
+    ep.source = { ...(ep.source || {}), captions: { provider: 'gladia', at: Date.now(), cues } };
     if (!ep.duration && cues.length) { ep.duration = cues[cues.length - 1].e; buildChunks(ep); }
     await saveEpisode(ep);
     return inChunk(cues);
   }
-  const tryCaptions = S.ytSource === 'supadata' || (S.ytSource === 'auto' && hasKey('supadata'));
+  const tryCaptions = ytPath() === 'captions';
   if (tryCaptions) {
     try {
       prog('Fetching YouTube captions…');
@@ -2184,6 +2150,35 @@ function verbatimRatio(cues, items) {
   for (let i = 1; i <= a.length; i++) { cur[0] = 0; for (let j = 1; j <= b.length; j++) cur[j] = a[i - 1] === b[j - 1] ? prev[j - 1] + 1 : Math.max(prev[j], cur[j - 1]); [prev, cur] = [cur, prev]; }
   return prev[b.length] / a.length;
 }
+/* When the cues carry word times, place each line by matching its characters to the spoken words,
+   so a line starts on its own first word whatever cue boundaries the model was given. */
+function retimeByWords(cues, sents) {
+  if (!cues.length || cues.filter(c => c.w?.length).length < cues.length * 0.8) return sents;
+  const src = [], st = [], en = [];
+  for (const c of cues) {
+    const ws = c.w?.length ? c.w : [{ t: c.t, s: c.s, e: c.e }];
+    for (const w of ws) { const ch = [...normJa(w.t)]; ch.forEach((x, k) => { src.push(x); st.push(w.s + (w.e - w.s) * k / ch.length); en.push(w.s + (w.e - w.s) * (k + 1) / ch.length); }); }
+  }
+  const out = [], first = [], last = [];
+  sents.forEach((x, n) => { const ch = [...normJa(plainOf(x.f))]; first[n] = out.length; ch.forEach(c => out.push(c)); last[n] = out.length - 1; });
+  const n = out.length, m = src.length; if (!n || !m || n * m > 4e6) return sents;
+  const W = m + 1, dp = new Uint16Array((n + 1) * W);
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i * W + j] = out[i] === src[j] ? dp[(i + 1) * W + j + 1] + 1 : Math.max(dp[(i + 1) * W + j], dp[i * W + j + 1]);
+  const map = new Int32Array(n).fill(-1);
+  for (let i = 0, j = 0; i < n && j < m;) { if (out[i] === src[j]) { map[i] = j; i++; j++; } else if (dp[(i + 1) * W + j] >= dp[i * W + j + 1]) i++; else j++; }
+  let prevEnd = -1;
+  const res = sents.map((x, k) => {
+    if (last[k] < first[k]) return x;
+    let a = -1, b = -1;
+    for (let i = first[k]; i <= last[k]; i++) if (map[i] >= 0) { a = Math.max(0, map[i] - (i - first[k])); break; }
+    for (let i = last[k]; i >= first[k]; i--) if (map[i] >= 0) { b = Math.min(m - 1, map[i] + (last[k] - i)); break; }
+    if (a < 0 || b < 0) return x;
+    a = Math.max(a, prevEnd + 1); if (b < a) b = a; prevEnd = b;
+    return { ...x, s: +st[a].toFixed(2), e: +Math.max(en[b], st[a] + 0.2).toFixed(2) };
+  });
+  for (let k = 1; k < res.length; k++) { if (res[k].s < res[k - 1].s) res[k].s = +(res[k - 1].s + 0.05).toFixed(2); if (res[k - 1].e > res[k].s) res[k - 1].e = res[k].s; if (res[k].e < res[k].s + 0.2) res[k].e = +(res[k].s + 0.2).toFixed(2); }
+  return res;
+}
 async function annotateBatch(ep, cues, prevText, usage) {
   const user = `Episode: ${ep.title || 'untitled'}\n${prevText ? `Previous line (context only, do not repeat it): ${prevText}\n` : ''}Cues:\n${cues.map((c, i) => `${i}| ${c.t}`).join('\n')}`;
   const ask = async extra => {
@@ -2198,7 +2193,7 @@ async function annotateBatch(ep, cues, prevText, usage) {
     const r2 = again ? verbatimRatio(cues, again) : 0;
     if (r2 > ratio) { raw = again; ratio = r2; }
   }
-  const out = timeSentences(cues, raw);
+  const out = retimeByWords(cues, timeSentences(cues, raw));
   if (ratio < 0.8) out.forEach(x => { x.loose = true; });
   return out;
 }
@@ -2215,8 +2210,9 @@ async function annotateRange(ep, cues, prevText, usage, depth = 0) {
   }
 }
 function rawSentences(cues) { return cues.map(c => ({ s: c.s, e: c.e, f: c.t, en: '', v: [], raw: true })); }
-async function processChunk(ep, i, { redoCues = false, redoAnnot = false } = {}) {
+async function processChunk(ep, i, { redoCues = false, redoAnnot = false, auto = false } = {}) {
   const key = `${ep.id}:${i}`; if (App.jobs.has(key)) return;
+  if (auto && needsGladia(ep)) return;   // paid, whole-video step: wait for the button
   const ch = ep.chunks[i]; if (!ch) return;
   if (Keys.locked) { try { await promptUnlock('Unlock your API keys to transcribe this part.'); } catch { return; } }
   App.jobs.set(key, true);
@@ -2483,7 +2479,16 @@ function renderChunkState() {
   }
   if (ch.status === 'none' || ch.status === 'error') {
     const cost = estimateCost(ep, ch), path = transcriptPath(ep);
-    const how = { stt: `Speech-to-text with ${S.sttModel}`, captions: ep.source?.captions?.cues?.length ? 'Uses the captions already saved' : 'Uses the video\'s YouTube captions (Supadata)', gemini: `Gemini (${S.ytGeminiModel}) listens to the video` }[path];
+    if (needsGladia(ep) && ch.status !== 'error') {
+      const mins = Math.round((ep.duration || 0) / 60), price = (ep.duration || 0) / 3600 * GLADIA_RATE;
+      box.append(el('div', { class: 'state' },
+        el('h3', {}, 'This video has no transcript yet'),
+        el('p', {}, `Gladia listens to the whole video once and times every word${mins ? `: ${mins} min, about ${price < 0.995 ? Math.max(1, Math.round(price * 100)) + ' cents' : '$' + price.toFixed(2)}` : ''}. Furigana and translations are then added part by part with ${S.llmModel} as you reach each part.`),
+        el('div', { class: 'row' }, el('button', { class: 'btn primary', type: 'button', onclick: () => processChunk(ep, ch.i) }, 'Transcribe this video'),
+          el('label', { class: 'btn', for: 'subsInput' }, 'Import subtitles'))));
+      return;
+    }
+    const how = { stt: `Speech-to-text with ${S.sttModel}`, captions: ep.source?.captions?.cues?.length ? (ep.source.captions.provider === 'gladia' ? 'Uses the word timing already saved for this video' : 'Uses the captions already saved') : ytPath() === 'gladia' ? 'Gladia times the whole video from its audio' : 'Uses the video\'s YouTube captions (Supadata)', gemini: `Gemini (${S.ytGeminiModel}) listens to the video` }[path];
     box.append(el('div', { class: 'state' },
       el('h3', {}, ch.status === 'error' ? 'This part didn\'t finish' : `${fmt(ch.start)}–${fmt(ch.end)} has no transcript yet`),
       ch.status === 'error' ? el('p', { class: 'status-bad' }, ch.err || 'Unknown error') : el('p', {}, `${how}, then ${S.llmModel} adds furigana, translations and vocabulary.${cost != null ? ` Roughly $${cost < 0.01 ? cost.toFixed(3) : cost.toFixed(2)} for this part.` : ''}${S.autoProcess ? ' Starts automatically when you play this part.' : ''}`),
@@ -2779,8 +2784,8 @@ function tick() {
   const ci = chunkAt(t);
   if (ci >= 0 && ci !== App.chunkIdx) setChunk(ci);
   const ch = curChunk();
-  if (ch && playing && S.autoProcess && ch.status === 'none' && !App.jobs.has(`${ep.id}:${ch.i}`)) processChunk(ep, ch.i);
-  if (ch && playing && S.prefetch && ch.end - t < 300) { const nx = ep.chunks[ch.i + 1]; if (nx && nx.status === 'none' && !App.jobs.has(`${ep.id}:${nx.i}`)) processChunk(ep, nx.i); }
+  if (ch && playing && S.autoProcess && ch.status === 'none' && !App.jobs.has(`${ep.id}:${ch.i}`)) processChunk(ep, ch.i, { auto: true });
+  if (ch && playing && S.prefetch && ch.end - t < 300) { const nx = ep.chunks[ch.i + 1]; if (nx && nx.status === 'none' && !App.jobs.has(`${ep.id}:${nx.i}`)) processChunk(ep, nx.i, { auto: true }); }
   const sents = ch?.sentences || [];
   let k = sentenceAt(sents, t - off);
   if (App.pin) {
@@ -2893,7 +2898,7 @@ function lcsHits(a, b) {
 }
 
 /* ---------- dialogs: settings ---------- */
-const KEY_FIELDS = ['groq', 'gemini', 'supadata', 'deapi', 'openai', 'openrouter', 'custom'];
+const KEY_FIELDS = ['groq', 'gemini', 'gladia', 'supadata', 'openai', 'openrouter', 'custom'];
 function fillDatalist(id, list) { const dl = $('#' + id); dl.innerHTML = ''; list.forEach(m => dl.append(el('option', { value: m }))); }
 function onProviderChange(kind) {
   if (kind === 'stt') { const p = PROVIDERS.stt[$('#sttProvider').value]; fillDatalist('sttModels', p.models); if (!p.models.includes($('#sttModel').value)) $('#sttModel').value = p.def; $('#sttBase').placeholder = p.base || 'https://your-endpoint/v1'; }
@@ -2981,7 +2986,7 @@ function usageTable(u, emptyText) {
 }
 function openPartUsage() {
   const ep = App.ep, ch = curChunk(); if (!ep || !ch) return;
-  const src = { captions: ep.source?.captions?.provider === 'file' ? 'an imported subtitle file' : ep.source?.captions?.provider === 'deapi' ? 'Whisper on the video\'s audio, via deAPI' : 'YouTube captions via Supadata', gemini: `Gemini listening to the video${ch.meta?.ytModel ? ` (${ch.meta.ytModel} requested)` : ''}`, stt: `Whisper speech-to-text (${ch.meta?.stt || S.sttModel})` }[ch.meta?.src] || 'unknown (transcribed before usage tracking was added)';
+  const src = { captions: ep.source?.captions?.provider === 'file' ? 'an imported subtitle file' : ep.source?.captions?.provider === 'gladia' ? 'Gladia, from the video\'s audio (word-level timing)' : 'YouTube captions via Supadata', gemini: `Gemini listening to the video${ch.meta?.ytModel ? ` (${ch.meta.ytModel} requested)` : ''}`, stt: `Whisper speech-to-text (${ch.meta?.stt || S.sttModel})` }[ch.meta?.src] || 'unknown (transcribed before usage tracking was added)';
   const body = $('#infoBody'); body.innerHTML = '';
   body.append(el('p', {}, `Transcript source: ${src}.`),
     usageTable(ch.usage, 'No usage was recorded for this part. It was transcribed before usage tracking was added, or nothing has run yet.'),
