@@ -985,6 +985,30 @@ English ("e"): a natural, faithful translation of that line. Fillers may be left
 Vocabulary ("v"): up to 3 words or expressions from the line worth learning at ${level}; skip basic words. "w" dictionary form, "r" reading in hiragana, "m" short English meaning in this context. Use [] when nothing qualifies.
 
 Output only the JSON.`;
+/* For transcripts that carry a time for every word (Gladia, Whisper): the model gets the speech as one
+   continuous stretch and decides the lines itself; each line is then placed on its own first word. */
+const ANNOT_SYSTEM_WORDS = level => `You turn raw Japanese speech-recognition text into study material for an English-speaking learner at level ${level}. The learner reads each line while listening and shadows it, so the Japanese must match the audio exactly.
+
+Input: one continuous stretch of transcribed speech. It may have little or no punctuation, and it is not divided into sentences.
+
+Return JSON: {"s":[{"f":"…","e":"…","v":[{"w":"…","r":"…","m":"…"}]}]}
+
+Lines
+- Divide the speech into lines, in order, covering all of it. One line is one spoken sentence or one short reply. Break at every place a sentence ends (after です, ます, よね, かな, だ, a question, or an interjection like はい or うわっ that stands alone).
+- A line is at most about 30 characters. Split a longer sentence at a natural pause (after けど, から, て, し, が, ので and similar). Never end a line in the middle of a word or number.
+- Never join two sentences into one line.
+
+Japanese text ("f"): word for word
+- Keep every word exactly as given, in the same order: fillers, repetitions, casual contractions, unfinished phrasing. Do not paraphrase, drop, tidy, reorder or swap words for synonyms. Fix a word only when it is clearly a recognition mistake.
+- Add natural punctuation (、。？！).
+- Furigana: write each word that contains kanji as {漢字|かんじ}. Braces wrap only the kanji, the reading is hiragana, okurigana stays outside: {食|た}べる, {勉強|べんきょう}する, {今日|きょう}. Never put braces around hiragana or katakana, and never write braces without a reading.
+
+English ("e"): a natural, faithful translation of that line. Fillers may be left out in English.
+
+Vocabulary ("v"): up to 3 words or expressions from the line worth learning at ${level}; skip basic words. "w" dictionary form, "r" reading in hiragana, "m" short English meaning in this context. Use [] when nothing qualifies.
+
+Output only the JSON.`;
+const ANNOT_SCHEMA_WORDS = { type: 'OBJECT', required: ['s'], properties: { s: { type: 'ARRAY', items: { type: 'OBJECT', required: ['f', 'e', 'v'], properties: { f: { type: 'STRING' }, e: { type: 'STRING' }, v: { type: 'ARRAY', items: { type: 'OBJECT', required: ['w', 'r', 'm'], properties: { w: { type: 'STRING' }, r: { type: 'STRING' }, m: { type: 'STRING' } } } } } } } } };
 const ANNOT_SCHEMA = {
   type: 'OBJECT', required: ['s'],
   properties: { s: { type: 'ARRAY', items: { type: 'OBJECT', required: ['c', 'f', 'e', 'v'], properties: {
@@ -2180,16 +2204,18 @@ function retimeByWords(cues, sents) {
   return res;
 }
 async function annotateBatch(ep, cues, prevText, usage) {
-  const user = `Episode: ${ep.title || 'untitled'}\n${prevText ? `Previous line (context only, do not repeat it): ${prevText}\n` : ''}Cues:\n${cues.map((c, i) => `${i}| ${c.t}`).join('\n')}`;
+  const wordTimed = cues.length > 0 && cues.filter(c => c.w?.length).length >= cues.length * 0.8;
+  const head = `Episode: ${ep.title || 'untitled'}\n${prevText ? `Previous line (context only, do not repeat it): ${prevText}\n` : ''}`;
+  const user = wordTimed ? `${head}Speech:\n${cues.map(c => c.t).join('')}` : `${head}Cues:\n${cues.map((c, i) => `${i}| ${c.t}`).join('\n')}`;
   const ask = async extra => {
-    const { json } = await llmJSON({ system: ANNOT_SYSTEM(S.level || 'N2 → N1'), user: user + (extra || ''), schema: ANNOT_SCHEMA, maxTokens: 16000, usage });
+    const { json } = await llmJSON({ system: (wordTimed ? ANNOT_SYSTEM_WORDS : ANNOT_SYSTEM)(S.level || 'N2 → N1'), user: user + (extra || ''), schema: wordTimed ? ANNOT_SCHEMA_WORDS : ANNOT_SCHEMA, maxTokens: 16000, usage });
     const raw = Array.isArray(json.s) ? json.s : Array.isArray(json.sentences) ? json.sentences : [];
     if (!raw.length) throw new Error('The model returned no sentences');
     return raw;
   };
   let raw = await ask(), ratio = verbatimRatio(cues, raw);
   if (ratio < 0.88) {
-    const again = await ask(`\n\nYour previous answer left out or reworded about ${Math.round((1 - ratio) * 100)}% of the spoken words. Write every cue word for word this time, including fillers like あの, まあ, ね and はい, and keep the lines short.`).catch(() => null);
+    const again = await ask(`\n\nYour previous answer left out or reworded about ${Math.round((1 - ratio) * 100)}% of the spoken words. Write every word exactly as given this time, including fillers like あの, まあ, ね and はい, and keep the lines short.`).catch(() => null);
     const r2 = again ? verbatimRatio(cues, again) : 0;
     if (r2 > ratio) { raw = again; ratio = r2; }
   }
